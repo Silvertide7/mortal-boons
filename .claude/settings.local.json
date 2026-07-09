@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"=== rogue_like_bonuses ===\" && ls -la /Users/nate/Workspace/minecraft/personal/rogue_like_bonuses && echo \"=== player_abilities ===\" && ls -la /Users/nate/Workspace/minecraft/personal/player_abilities)",
+      "Bash(./gradlew compileJava --console=plain)"
+    ]
+  }
+}
