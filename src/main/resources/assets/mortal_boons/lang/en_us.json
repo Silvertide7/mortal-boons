@@ -1,2 +1,8 @@
 {
+  "boon.mortal_boons.iron_blooded": "Iron Blooded",
+  "boon.mortal_boons.fleetfoot": "Fleetfoot",
+  "mortal_boons.tier.iron": "Iron",
+  "mortal_boons.tier.gold": "Gold",
+  "mortal_boons.tier.diamond": "Diamond",
+  "mortal_boons.tier.netherite": "Netherite"
 }
