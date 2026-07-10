@@ -118,6 +118,9 @@ configurations {
 }
 
 dependencies {
+    compileOnly files("../player_abilities/build/libs/player_abilities-${player_abilities_version}.jar")
+    localRuntime files("../player_abilities/build/libs/player_abilities-${player_abilities_version}.jar")
+
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"

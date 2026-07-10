@@ -1,13 +1,19 @@
 package net.silvertide.mortal_boons.roll;
 
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.silvertide.mortal_boons.boon.Boon;
 import net.silvertide.mortal_boons.boon.BoonEffects;
 import net.silvertide.mortal_boons.boon.BoonManager;
 import net.silvertide.mortal_boons.boon.HeldBoon;
 import net.silvertide.mortal_boons.boon.Tier;
+import net.silvertide.mortal_boons.compat.player_abilities.PlayerAbilitiesIntegration;
 import net.silvertide.mortal_boons.config.BoonConfig;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 import net.silvertide.mortal_boons.data.BoonData;
@@ -50,6 +56,7 @@ public final class RollManager {
         boonData.addBoon(new HeldBoon(boon.id(), tier));
         boonData.incrementLifetimeRollCount();
         BoonEffects.apply(player, boon, tier);
+        playAltarEffects(player, SoundEvents.ENCHANTMENT_TABLE_USE, tier);
         player.displayClientMessage(Component.translatable("mortal_boons.roll.success",
                 boon.displayName(), Tier.fromLevel(tier).displayName()), false);
         return true;
@@ -75,6 +82,7 @@ public final class RollManager {
         chargeXpAndStartCooldown(player, boonData, gameTime, cost);
         boonData.replaceBoonAt(reforgedIndex, new HeldBoon(boon.id(), newTier));
         BoonEffects.apply(player, boon, newTier);
+        playAltarEffects(player, SoundEvents.ANVIL_USE, newTier);
         player.displayClientMessage(Component.translatable("mortal_boons.reforge.success",
                 boon.displayName(), Tier.fromLevel(newTier).displayName()), false);
         return true;
@@ -113,6 +121,7 @@ public final class RollManager {
                 BoonEffects.remove(player, oldBoon, removed.tier()));
         boonData.replaceBoonAt(removedIndex, new HeldBoon(newBoon.id(), newTier));
         BoonEffects.apply(player, newBoon, newTier);
+        playAltarEffects(player, SoundEvents.EVOKER_CAST_SPELL, newTier);
         player.displayClientMessage(Component.translatable("mortal_boons.reroll.success",
                 removedName, newBoon.displayName(), Tier.fromLevel(newTier).displayName()), false);
         return true;
@@ -143,6 +152,20 @@ public final class RollManager {
         return true;
     }
 
+    private static void playAltarEffects(ServerPlayer player, SoundEvent sound, int tier) {
+        ServerLevel level = player.serverLevel();
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                sound, SoundSource.BLOCKS, 1.0F, 0.7F + 0.15F * tier);
+        level.sendParticles(ParticleTypes.ENCHANT,
+                player.getX(), player.getY() + 1.5, player.getZ(),
+                20 + tier * 15, 0.6, 0.6, 0.6, 0.8);
+        if (tier == 4) {
+            level.sendParticles(ParticleTypes.END_ROD,
+                    player.getX(), player.getY() + 1.0, player.getZ(),
+                    24, 0.4, 0.7, 0.4, 0.05);
+        }
+    }
+
     private static void chargeXpAndStartCooldown(ServerPlayer player, BoonData boonData, long gameTime, int cost) {
         if (!player.isCreative()) {
             player.giveExperienceLevels(-cost);
@@ -154,6 +177,7 @@ public final class RollManager {
         List<Boon> candidates = BoonManager.all().stream()
                 .filter(boon -> !boonData.holds(boon.id()))
                 .filter(boon -> boon.weight() > 0)
+                .filter(boon -> !boon.requiresPlayerAbilities() || PlayerAbilitiesIntegration.isLoaded())
                 .toList();
         int totalWeight = candidates.stream().mapToInt(Boon::weight).sum();
         if (totalWeight <= 0) {

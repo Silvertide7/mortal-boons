@@ -7,6 +7,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.silvertide.mortal_boons.MortalBoons;
 import net.silvertide.mortal_boons.boon.BoonEffects;
+import net.silvertide.mortal_boons.compat.player_abilities.PlayerAbilitiesIntegration;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 
 @EventBusSubscriber(modid = MortalBoons.MODID)
@@ -33,6 +34,7 @@ public final class BoonLifecycleHandler {
         if (event.isWasDeath()
                 && event.getEntity() instanceof ServerPlayer newPlayer
                 && event.getOriginal() instanceof ServerPlayer originalPlayer) {
+            PlayerAbilitiesIntegration.revokeAllGrants(newPlayer);
             int lostBoonCount = originalPlayer.getData(BoonAttachments.BOON_DATA).getHeldBoons().size();
             if (lostBoonCount > 0) {
                 newPlayer.displayClientMessage(Component.translatable("mortal_boons.death.lost", lostBoonCount), false);

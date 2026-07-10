@@ -50,8 +50,10 @@ attachment + codec persistence, lifecycle event handlers, networking registratio
 - Assets go under `src/main/resources/assets/mortal_boons/`.
 - Boons are datapack-defined JSON loaded by a `SimpleJsonResourceReloadListener` at
   `data/<namespace>/mortal_boons/boons/<name>.json` (boon id = `<namespace>:<name>`).
-  Built-ins ship in the jar under `data/mortal_boons/mortal_boons/boons/`. Boons are pure
-  data (attribute grants now, ability grants later) — no behavioral boon code in this mod.
+  Built-ins ship as a **removable built-in datapack** ("Mortal Boons Default Boons",
+  enabled by default) under `builtin_data_packs/default_boons/`, registered via
+  `AddPackFindersEvent` — same pattern as the artifactory mod. Boons are pure data
+  (attribute grants + optional ability grants) — no behavioral boon code in this mod.
 
 ## Build & run
 

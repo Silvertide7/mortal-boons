@@ -8,7 +8,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.silvertide.mortal_boons.roll.RollManager;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.silvertide.mortal_boons.network.AltarScreenPayload;
 
 public class BoonAltarBlock extends Block {
     public static final int MAX_STACK_HEIGHT = 3;
@@ -26,23 +27,29 @@ public class BoonAltarBlock extends Block {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.PASS;
         }
-        BlockPos bottomPos = pos;
-        while (level.getBlockState(bottomPos.below()).is(this)) {
-            bottomPos = bottomPos.below();
+        PacketDistributor.sendToPlayer(serverPlayer,
+                AltarScreenPayload.snapshot(serverPlayer, altarPowerAt(level, pos), pos));
+        return InteractionResult.CONSUME;
+    }
+
+    public static int altarPowerAt(Level level, BlockPos pos) {
+        if (!(level.getBlockState(pos).getBlock() instanceof BoonAltarBlock)) {
+            return 0;
         }
+        BlockPos bottomPos = bottomOf(level, pos);
         int altarPower = 0;
-        while (altarPower < MAX_STACK_HEIGHT && level.getBlockState(bottomPos.above(altarPower)).is(this)) {
+        while (altarPower < MAX_STACK_HEIGHT
+                && level.getBlockState(bottomPos.above(altarPower)).getBlock() instanceof BoonAltarBlock) {
             altarPower++;
         }
-        int clickedSegment = pos.getY() - bottomPos.getY() + 1;
-        switch (clickedSegment) {
-            case 1 -> RollManager.roll(serverPlayer, altarPower);
-            case 2 -> RollManager.reforge(serverPlayer);
-            case 3 -> RollManager.reroll(serverPlayer);
-            default -> {
-                return InteractionResult.PASS;
-            }
+        return altarPower;
+    }
+
+    private static BlockPos bottomOf(Level level, BlockPos pos) {
+        BlockPos bottomPos = pos;
+        while (level.getBlockState(bottomPos.below()).getBlock() instanceof BoonAltarBlock) {
+            bottomPos = bottomPos.below();
         }
-        return InteractionResult.CONSUME;
+        return bottomPos;
     }
 }

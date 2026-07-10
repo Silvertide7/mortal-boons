@@ -1,14 +1,25 @@
 package net.silvertide.mortal_boons.boon;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 import java.util.Locale;
 
 public enum Tier {
-    IRON,
-    GOLD,
-    DIAMOND,
-    NETHERITE;
+    IRON(ChatFormatting.GRAY),
+    GOLD(ChatFormatting.GOLD),
+    DIAMOND(ChatFormatting.AQUA),
+    NETHERITE(ChatFormatting.DARK_PURPLE);
+
+    private final ChatFormatting color;
+
+    Tier(ChatFormatting color) {
+        this.color = color;
+    }
+
+    public ChatFormatting color() {
+        return color;
+    }
 
     public Component displayName() {
         return Component.translatable("mortal_boons.tier." + name().toLowerCase(Locale.ROOT));

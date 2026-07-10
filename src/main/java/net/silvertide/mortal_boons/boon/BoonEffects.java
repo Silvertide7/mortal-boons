@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.silvertide.mortal_boons.MortalBoons;
+import net.silvertide.mortal_boons.compat.player_abilities.PlayerAbilitiesIntegration;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public final class BoonEffects {
             attributeInstance.addTransientModifier(
                     new AttributeModifier(modifierId, grant.amount(), grant.operation()));
         }
+        PlayerAbilitiesIntegration.applyBoon(player, boon, tier);
     }
 
     public static void remove(ServerPlayer player, Boon boon, int tier) {
@@ -36,6 +38,7 @@ public final class BoonEffects {
                 attributeInstance.removeModifier(modifierId(boon, grantIndex));
             }
         }
+        PlayerAbilitiesIntegration.removeBoon(player, boon);
     }
 
     public static void applyAllHeld(ServerPlayer player) {
