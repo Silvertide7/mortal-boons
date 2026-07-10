@@ -1,19 +1,17 @@
 package net.silvertide.mortal_boons.boon;
 
+import net.minecraft.network.chat.Component;
+
+import java.util.Locale;
+
 public enum Tier {
-    IRON(1),
-    GOLD(2),
-    DIAMOND(3),
-    NETHERITE(4);
+    IRON,
+    GOLD,
+    DIAMOND,
+    NETHERITE;
 
-    private final int level;
-
-    Tier(int level) {
-        this.level = level;
-    }
-
-    public int level() {
-        return level;
+    public Component displayName() {
+        return Component.translatable("mortal_boons.tier." + name().toLowerCase(Locale.ROOT));
     }
 
     public static Tier fromLevel(int level) {

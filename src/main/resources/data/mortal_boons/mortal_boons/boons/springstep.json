@@ -1,0 +1,17 @@
+{
+  "weight": 10,
+  "min_tier": 1,
+  "max_tier": 4,
+  "attribute_grants": [
+    {
+      "attribute": "minecraft:generic.jump_strength",
+      "amount": [0.25, 0.5, 0.75, 1.0],
+      "operation": "add_multiplied_base"
+    },
+    {
+      "attribute": "minecraft:generic.safe_fall_distance",
+      "amount": [1.0, 2.0, 3.0, 4.0],
+      "operation": "add_value"
+    }
+  ]
+}

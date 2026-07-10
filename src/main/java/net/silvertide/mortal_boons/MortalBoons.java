@@ -5,6 +5,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.silvertide.mortal_boons.block.AltarBlocks;
+import net.silvertide.mortal_boons.config.BoonConfig;
+import net.silvertide.mortal_boons.data.BoonAttachments;
 import org.slf4j.Logger;
 
 @Mod(MortalBoons.MODID)
@@ -17,6 +21,8 @@ public class MortalBoons {
     }
 
     public MortalBoons(IEventBus modEventBus, ModContainer modContainer) {
-        LOGGER.info("Mortal Boons loaded.");
+        modContainer.registerConfig(ModConfig.Type.COMMON, BoonConfig.SPEC);
+        BoonAttachments.register(modEventBus);
+        AltarBlocks.register(modEventBus);
     }
 }

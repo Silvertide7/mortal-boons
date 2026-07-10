@@ -1,0 +1,12 @@
+{
+  "weight": 10,
+  "min_tier": 1,
+  "max_tier": 4,
+  "attribute_grants": [
+    {
+      "attribute": "minecraft:generic.movement_speed",
+      "amount": [0.10, 0.15, 0.20, 0.25],
+      "operation": "add_multiplied_base"
+    }
+  ]
+}

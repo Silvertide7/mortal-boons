@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "mortal_boons:block/boon_altar" }
+  }
+}
