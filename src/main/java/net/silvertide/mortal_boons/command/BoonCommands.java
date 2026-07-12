@@ -78,6 +78,7 @@ public final class BoonCommands {
         int clearedCount = player.getData(BoonAttachments.BOON_DATA).getHeldBoons().size();
         BoonEffects.removeAllHeld(player);
         player.setData(BoonAttachments.BOON_DATA, new BoonData());
+        player.setData(BoonAttachments.ROLL_COOLDOWN_END_GAME_TIME, 0L);
         source.sendSuccess(() -> Component.translatable("mortal_boons.clear.success", clearedCount), false);
         return Command.SINGLE_SUCCESS;
     }

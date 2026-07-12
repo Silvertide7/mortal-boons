@@ -26,7 +26,7 @@
   "mortal_boons.screen.title": "Boon Altar",
   "mortal_boons.screen.power": "Altar Power: %s",
   "mortal_boons.screen.empty": "Empty Slot",
-  "mortal_boons.screen.locked": "Locked — stack the altar higher",
+  "mortal_boons.screen.locked": "Locked — empower the altar",
   "mortal_boons.screen.ability_grant": "Grants ability %s (level %s)",
   "mortal_boons.screen.button.roll": "Roll",
   "mortal_boons.screen.button.reforge": "Reforge",

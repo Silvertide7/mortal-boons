@@ -1,5 +1,7 @@
 {
   "variants": {
-    "": { "model": "mortal_boons:block/boon_altar" }
+    "power=1": { "model": "mortal_boons:block/boon_altar_1" },
+    "power=2": { "model": "mortal_boons:block/boon_altar_2" },
+    "power=3": { "model": "mortal_boons:block/boon_altar_3" }
   }
 }

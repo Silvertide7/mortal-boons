@@ -23,7 +23,8 @@ public final class AltarBlocks {
             () -> new BoonAltarBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GRAY)
                     .strength(3.0F, 1200.0F)
-                    .sound(SoundType.STONE)));
+                    .sound(SoundType.STONE)
+                    .lightLevel(state -> state.getValue(BoonAltarBlock.POWER) == 3 ? 10 : 0)));
 
     public static final DeferredItem<BlockItem> BOON_ALTAR_ITEM =
             ITEMS.registerSimpleBlockItem("boon_altar", BOON_ALTAR);

@@ -11,7 +11,7 @@ import net.silvertide.mortal_boons.network.AltarActionPayload;
 import net.silvertide.mortal_boons.network.AltarScreenPayload;
 
 public class AltarScreen extends Screen {
-    private static final ResourceLocation BACKGROUND = MortalBoons.id("textures/gui/altar_screen.png");
+    private static final ResourceLocation BACKGROUND = MortalBoons.id("textures/gui/menu_altar.png");
     private static final int BACKGROUND_TEXTURE_SIZE = 512;
     private static final int PANEL_WIDTH = 240;
     private static final int PANEL_HEIGHT = 240;

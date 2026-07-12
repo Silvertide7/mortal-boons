@@ -42,7 +42,7 @@ public final class RollManager {
             return false;
         }
         int cost = xpLevelCost(boonData.getLifetimeRollCount());
-        if (rejectIfOnCooldown(player, boonData, gameTime) || rejectIfCannotAfford(player, cost)) {
+        if (rejectIfOnCooldown(player, gameTime) || rejectIfCannotAfford(player, cost)) {
             return false;
         }
         Optional<Boon> rolledBoon = pickWeightedExcludingHeld(player.getRandom(), boonData);
@@ -52,7 +52,7 @@ public final class RollManager {
         }
         Boon boon = rolledBoon.get();
         int tier = rollTier(player.getRandom(), boon);
-        chargeXpAndStartCooldown(player, boonData, gameTime, cost);
+        chargeXpAndStartCooldown(player, gameTime, cost);
         boonData.addBoon(new HeldBoon(boon.id(), tier));
         boonData.incrementLifetimeRollCount();
         BoonEffects.apply(player, boon, tier);
@@ -72,14 +72,14 @@ public final class RollManager {
             return false;
         }
         int cost = BoonConfig.REFORGE_XP_LEVEL_COST.get();
-        if (rejectIfOnCooldown(player, boonData, gameTime) || rejectIfCannotAfford(player, cost)) {
+        if (rejectIfOnCooldown(player, gameTime) || rejectIfCannotAfford(player, cost)) {
             return false;
         }
         int reforgedIndex = reforgeableIndices.get(player.getRandom().nextInt(reforgeableIndices.size()));
         HeldBoon current = heldBoons.get(reforgedIndex);
         Boon boon = BoonManager.get(current.boonId()).orElseThrow();
         int newTier = rollTier(player.getRandom(), boon);
-        chargeXpAndStartCooldown(player, boonData, gameTime, cost);
+        chargeXpAndStartCooldown(player, gameTime, cost);
         boonData.replaceBoonAt(reforgedIndex, new HeldBoon(boon.id(), newTier));
         BoonEffects.apply(player, boon, newTier);
         playAltarEffects(player, SoundEvents.ANVIL_USE, newTier);
@@ -101,7 +101,7 @@ public final class RollManager {
             return false;
         }
         int cost = BoonConfig.REROLL_XP_LEVEL_COST.get();
-        if (rejectIfOnCooldown(player, boonData, gameTime) || rejectIfCannotAfford(player, cost)) {
+        if (rejectIfOnCooldown(player, gameTime) || rejectIfCannotAfford(player, cost)) {
             return false;
         }
         Optional<Boon> replacementBoon = pickWeightedExcludingHeld(player.getRandom(), boonData);
@@ -116,7 +116,7 @@ public final class RollManager {
                 .orElse(Component.literal(removed.boonId().toString()));
         Boon newBoon = replacementBoon.get();
         int newTier = rollTier(player.getRandom(), newBoon);
-        chargeXpAndStartCooldown(player, boonData, gameTime, cost);
+        chargeXpAndStartCooldown(player, gameTime, cost);
         BoonManager.get(removed.boonId()).ifPresent(oldBoon ->
                 BoonEffects.remove(player, oldBoon, removed.tier()));
         boonData.replaceBoonAt(removedIndex, new HeldBoon(newBoon.id(), newTier));
@@ -134,11 +134,12 @@ public final class RollManager {
                 .toList();
     }
 
-    private static boolean rejectIfOnCooldown(ServerPlayer player, BoonData boonData, long gameTime) {
-        if (player.isCreative() || boonData.isRollReady(gameTime)) {
+    private static boolean rejectIfOnCooldown(ServerPlayer player, long gameTime) {
+        long cooldownEndGameTime = player.getData(BoonAttachments.ROLL_COOLDOWN_END_GAME_TIME);
+        if (player.isCreative() || gameTime >= cooldownEndGameTime) {
             return false;
         }
-        long ticksRemaining = boonData.getRollCooldownEndGameTime() - gameTime;
+        long ticksRemaining = cooldownEndGameTime - gameTime;
         long secondsRemaining = (ticksRemaining + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND;
         player.displayClientMessage(Component.translatable("mortal_boons.roll.on_cooldown", secondsRemaining), false);
         return true;
@@ -166,11 +167,11 @@ public final class RollManager {
         }
     }
 
-    private static void chargeXpAndStartCooldown(ServerPlayer player, BoonData boonData, long gameTime, int cost) {
+    private static void chargeXpAndStartCooldown(ServerPlayer player, long gameTime, int cost) {
         if (!player.isCreative()) {
             player.giveExperienceLevels(-cost);
         }
-        boonData.startRollCooldown(gameTime, BoonConfig.ROLL_COOLDOWN_TICKS.get());
+        player.setData(BoonAttachments.ROLL_COOLDOWN_END_GAME_TIME, gameTime + BoonConfig.ROLL_COOLDOWN_TICKS.get());
     }
 
     private static Optional<Boon> pickWeightedExcludingHeld(RandomSource random, BoonData boonData) {

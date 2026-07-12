@@ -11,10 +11,13 @@ powerful but mortal — **die and you lose all of them**.
 - **Tiers**: 1–4, displayed as Iron / Gold / Diamond / Netherite. Higher tier = stronger
   effect. Not every boon spans all tiers; some are fixed-tier (Guardian Angel is tier 4 only).
 - **Slots**: a player holds up to 3 distinct boons. The same boon id can never be held twice.
-- **Boon Altar**: a vertically stackable block (1–3 high); stack height gates progression —
-  1 block rolls boons (slot cap 1), 2 unlocks reforge (tier reroll, cap 2), 3 unlocks reroll
-  (replace a boon, cap 3, requires full slots by default). Shrinking an altar never removes
-  held boons.
+- **Boon Altar**: a single block whose `POWER` (1–3) comes from its surroundings: +1 for lit
+  candles on its back and both sides (front stays open; the block has `FACING`), +1 for a
+  beacon block directly beneath. No ordering — each condition independently adds one. Power
+  gates progression: 1 rolls boons (slot cap 1), 2 unlocks reforge (tier reroll, cap 2), 3
+  unlocks reroll (replace a boon, cap 3, requires full slots by default) and emits light.
+  Power is a blockstate updated via `neighborChanged` (all checked positions are adjacent),
+  with one model/texture per power level. Weakening an altar never removes held boons.
 - **Abilities**: boons can grant active/passive/triggered abilities from the sibling
   `player_abilities` mod. This mod owns the mapping and calls `AbilityAPI.grant`/`revoke`
   directly (optional compat, PmmoCompat-style, no event bridge). On death-clone we revoke all

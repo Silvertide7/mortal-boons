@@ -38,7 +38,7 @@ public final class ServerPayloadHandlers {
                 }
             }
             PacketDistributor.sendToPlayer(serverPlayer,
-                    AltarScreenPayload.snapshot(serverPlayer, altarPower, payload.altarPos()));
+                    AltarScreenPayload.snapshot(serverPlayer, payload.altarPos()));
         });
     }
 }
