@@ -10,26 +10,38 @@ import net.silvertide.mortal_boons.MortalBoons;
 import net.silvertide.mortal_boons.network.AltarActionPayload;
 import net.silvertide.mortal_boons.network.AltarScreenPayload;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class AltarScreen extends Screen {
     private static final ResourceLocation BACKGROUND = MortalBoons.id("textures/gui/menu_altar.png");
-    private static final int BACKGROUND_TEXTURE_SIZE = 512;
-    private static final int PANEL_WIDTH = 240;
-    private static final int PANEL_HEIGHT = 240;
-    private static final int PANEL_PADDING_TOP = 16;
-    private static final int TITLE_COLOR = 0xFFD75F;
-    private static final int SLOT_TITLE_COLOR = 0xFFFFFF;
-    private static final int LINE_COLOR = 0xA0A0A0;
-    private static final int LINE_HEIGHT = 10;
-    private static final int SLOT_TITLE_HEIGHT = 14;
-    private static final int SLOT_GAP = 8;
+    private static final ResourceLocation BACKGROUND_BEACON = MortalBoons.id("textures/gui/menu_altar_beacon.png");
+    private static final ResourceLocation COMPONENTS = MortalBoons.id("textures/gui/menu_components.png");
+    private static final int TEXTURE_SIZE = 256;
+    private static final int MENU_WIDTH = 232;
+    private static final int MENU_HEIGHT = 246;
+    private static final int MENU_CENTER_X = 116;
+    private static final int CARD_WIDTH = 43;
+    private static final int CARD_HEIGHT = 57;
+    private static final int[] CARD_U_BY_TIER = {0, 45, 90, 135};
+    private static final int CARD_V = 0;
+    private static final int CARD_AREA_TOP = 75;
+    private static final int CARD_AREA_HEIGHT = 67;
+    private static final int CARD_ROW_LEFT = 45;
+    private static final int CARD_GAP = 6;
+    private static final int CARD_SLOT_SPACING = CARD_WIDTH + CARD_GAP;
+    private static final int CARD_Y = CARD_AREA_TOP + (CARD_AREA_HEIGHT - CARD_HEIGHT) / 2;
+    private static final float HOVERED_CARD_SCALE = 1.05F;
+    private static final float CARD_SHADOW_ALPHA = 0.35F;
+    private static final int CARD_SHADOW_OFFSET = 2;
     private static final int BUTTON_WIDTH = 66;
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_GAP = 5;
-    private static final int BUTTON_BOTTOM_MARGIN = 14;
+    private static final int BUTTON_TOP = 155;
 
     private final AltarScreenPayload data;
-    private int panelLeft;
-    private int panelTop;
+    private int menuLeft;
+    private int menuTop;
 
     public AltarScreen(AltarScreenPayload data) {
         super(Component.translatable("mortal_boons.screen.title"));
@@ -43,11 +55,11 @@ public class AltarScreen extends Screen {
 
     @Override
     protected void init() {
-        panelLeft = (width - PANEL_WIDTH) / 2;
-        panelTop = (height - PANEL_HEIGHT) / 2;
-        int buttonY = panelTop + PANEL_HEIGHT - BUTTON_HEIGHT - BUTTON_BOTTOM_MARGIN;
+        menuLeft = (width - MENU_WIDTH) / 2;
+        menuTop = (height - MENU_HEIGHT) / 2;
+        int buttonY = menuTop + BUTTON_TOP;
         int rowWidth = BUTTON_WIDTH * 3 + BUTTON_GAP * 2;
-        int rowStartX = panelLeft + (PANEL_WIDTH - rowWidth) / 2;
+        int rowStartX = menuLeft + MENU_CENTER_X - rowWidth / 2;
         addRenderableWidget(actionButton("mortal_boons.screen.button.roll", AltarActionPayload.Action.ROLL,
                 rowStartX, buttonY, true));
         addRenderableWidget(actionButton("mortal_boons.screen.button.reforge", AltarActionPayload.Action.REFORGE,
@@ -69,29 +81,64 @@ public class AltarScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.blit(BACKGROUND, panelLeft, panelTop, PANEL_WIDTH, PANEL_HEIGHT,
-                0.0F, 0.0F, BACKGROUND_TEXTURE_SIZE, BACKGROUND_TEXTURE_SIZE,
-                BACKGROUND_TEXTURE_SIZE, BACKGROUND_TEXTURE_SIZE);
+        ResourceLocation background = data.beaconBelow() ? BACKGROUND_BEACON : BACKGROUND;
+        guiGraphics.blit(background, menuLeft, menuTop, 0.0F, 0.0F, MENU_WIDTH, MENU_HEIGHT,
+                TEXTURE_SIZE, TEXTURE_SIZE);
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-        int centerX = width / 2;
-        int y = panelTop + PANEL_PADDING_TOP;
-        guiGraphics.drawCenteredString(font, title, centerX, y, TITLE_COLOR);
-        y += SLOT_TITLE_HEIGHT;
-        guiGraphics.drawCenteredString(font,
-                Component.translatable("mortal_boons.screen.power", data.altarPower()), centerX, y, LINE_COLOR);
-        y += SLOT_TITLE_HEIGHT + SLOT_GAP;
-        for (AltarScreenPayload.SlotDisplay slot : data.slots()) {
-            guiGraphics.drawCenteredString(font, slot.title(), centerX, y, SLOT_TITLE_COLOR);
-            y += SLOT_TITLE_HEIGHT;
-            for (Component line : slot.lines()) {
-                guiGraphics.drawCenteredString(font, line, centerX, y, LINE_COLOR);
-                y += LINE_HEIGHT;
+        int hoveredIndex = -1;
+        for (int slotIndex = 0; slotIndex < data.slots().size(); slotIndex++) {
+            if (isMouseOverCard(mouseX, mouseY, cardX(slotIndex), menuTop + CARD_Y)) {
+                hoveredIndex = slotIndex;
+            } else {
+                drawCard(guiGraphics, slotIndex, false);
             }
-            y += SLOT_GAP;
         }
+        if (hoveredIndex >= 0) {
+            drawCard(guiGraphics, hoveredIndex, true);
+            guiGraphics.renderComponentTooltip(font, tooltipLines(data.slots().get(hoveredIndex)), mouseX, mouseY);
+        }
+    }
+
+    private int cardX(int slotIndex) {
+        return menuLeft + CARD_ROW_LEFT + slotIndex * CARD_SLOT_SPACING;
+    }
+
+    private void drawCard(GuiGraphics guiGraphics, int slotIndex, boolean hovered) {
+        int tier = data.slots().get(slotIndex).tier();
+        if (tier < 1 || tier > 4) {
+            return;
+        }
+        int cardX = cardX(slotIndex);
+        int cardY = menuTop + CARD_Y;
+        guiGraphics.pose().pushPose();
+        if (hovered) {
+            float centerX = cardX + CARD_WIDTH / 2.0F;
+            float centerY = cardY + CARD_HEIGHT / 2.0F;
+            guiGraphics.pose().translate(centerX, centerY, 0);
+            guiGraphics.pose().scale(HOVERED_CARD_SCALE, HOVERED_CARD_SCALE, 1.0F);
+            guiGraphics.pose().translate(-centerX, -centerY, 0);
+        }
+        guiGraphics.setColor(0.0F, 0.0F, 0.0F, CARD_SHADOW_ALPHA);
+        guiGraphics.blit(COMPONENTS, cardX + CARD_SHADOW_OFFSET, cardY + CARD_SHADOW_OFFSET,
+                CARD_U_BY_TIER[tier - 1], CARD_V, CARD_WIDTH, CARD_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        guiGraphics.blit(COMPONENTS, cardX, cardY, CARD_U_BY_TIER[tier - 1], CARD_V,
+                CARD_WIDTH, CARD_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+        guiGraphics.pose().popPose();
+    }
+
+    private static boolean isMouseOverCard(int mouseX, int mouseY, int cardX, int cardY) {
+        return mouseX >= cardX && mouseX < cardX + CARD_WIDTH && mouseY >= cardY && mouseY < cardY + CARD_HEIGHT;
+    }
+
+    private static List<Component> tooltipLines(AltarScreenPayload.SlotDisplay slot) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(slot.title());
+        lines.addAll(slot.lines());
+        return lines;
     }
 }

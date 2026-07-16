@@ -28,10 +28,11 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
                                  List<SlotDisplay> slots) implements CustomPacketPayload {
     public static final Type<AltarScreenPayload> TYPE = new Type<>(MortalBoons.id("altar_screen"));
 
-    public record SlotDisplay(Component title, List<Component> lines) {
+    public record SlotDisplay(Component title, List<Component> lines, int tier) {
         public static final StreamCodec<RegistryFriendlyByteBuf, SlotDisplay> STREAM_CODEC = StreamCodec.composite(
                 ComponentSerialization.TRUSTED_STREAM_CODEC, SlotDisplay::title,
                 ComponentSerialization.TRUSTED_STREAM_CODEC.apply(ByteBufCodecs.list()), SlotDisplay::lines,
+                ByteBufCodecs.VAR_INT, SlotDisplay::tier,
                 SlotDisplay::new);
     }
 
@@ -58,9 +59,9 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
             if (slotIndex < heldBoons.size()) {
                 slots.add(heldSlot(heldBoons.get(slotIndex)));
             } else if (slotIndex < altarPower) {
-                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.empty"), List.of()));
+                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.empty"), List.of(), 0));
             } else {
-                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of()));
+                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of(), 0));
             }
         }
         return new AltarScreenPayload(altarPower, candlesLit, beaconBelow, altarPos, slots);
@@ -70,7 +71,7 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
         Optional<Boon> boonLookup = BoonManager.get(held.boonId());
         Tier tier = Tier.fromLevel(held.tier());
         if (boonLookup.isEmpty()) {
-            return new SlotDisplay(Component.literal(held.boonId().toString()), List.of());
+            return new SlotDisplay(Component.literal(held.boonId().toString()), List.of(), held.tier());
         }
         Boon boon = boonLookup.get();
         Component title = Component.empty()
@@ -83,7 +84,7 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
         boon.attributeGrants(held.tier()).forEach(grant -> lines.add(describeAttribute(grant)));
         boon.abilityGrants().forEach(spec -> lines.add(Component.translatable("mortal_boons.screen.ability_grant",
                 spec.abilityId().toString(), spec.abilityLevel().resolve(held.tier()))));
-        return new SlotDisplay(title, lines);
+        return new SlotDisplay(title, lines, held.tier());
     }
 
     private static Component describeAttribute(AttributeGrant grant) {
