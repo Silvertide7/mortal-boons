@@ -4,6 +4,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.silvertide.mortal_boons.MortalBoons;
 import net.silvertide.mortal_boons.network.FatestoneActionPayload;
@@ -11,6 +12,7 @@ import net.silvertide.mortal_boons.network.FatestoneScreenPayload;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class BoonCard {
     public static final int WIDTH = 44;
@@ -24,6 +26,15 @@ public class BoonCard {
     private static final int CONTENT_WIDTH = 38;
     private static final int BUTTON_STACK_BOTTOM = 50;
     private static final int BUTTON_GAP = 1;
+    private static final int ICON_FRAME_SIZE = 20;
+    private static final int ICON_FRAME_ROW_V = 108;
+    private static final int ICON_FRAME_STRIDE_U = ICON_FRAME_SIZE + 1;
+    private static final int ICON_FRAME_TOP = 5;
+    private static final int ICON_SIZE = 16;
+    private static final int ICON_INSET = (ICON_FRAME_SIZE - ICON_SIZE) / 2;
+    private static final int NAME_TOP = ICON_FRAME_TOP + ICON_FRAME_SIZE + 1;
+    private static final float NAME_SCALE = 0.5F;
+    private static final int NAME_COLOR = 0xEED3AB;
     private static final float HOVERED_SCALE = 1.05F;
     private static final float SHADOW_ALPHA = 0.15F;
     private static final int SHADOW_OFFSET = 2;
@@ -130,8 +141,36 @@ public class BoonCard {
             for (CardButton button : buttons) {
                 button.render(guiGraphics, font, mouseX, mouseY);
             }
+        } else {
+            renderIcon(guiGraphics);
+            renderName(guiGraphics, font);
         }
         guiGraphics.pose().popPose();
+    }
+
+    private void renderName(GuiGraphics guiGraphics, Font font) {
+        String upperCaseName = slot.name().getString().toUpperCase(Locale.ROOT);
+        int wrapWidth = (int) (CONTENT_WIDTH / NAME_SCALE);
+        List<FormattedCharSequence> nameLines = font.split(Component.literal(upperCaseName), wrapWidth);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(x + WIDTH / 2.0F, y + NAME_TOP, 0);
+        guiGraphics.pose().scale(NAME_SCALE, NAME_SCALE, 1.0F);
+        for (int lineIndex = 0; lineIndex < nameLines.size(); lineIndex++) {
+            FormattedCharSequence line = nameLines.get(lineIndex);
+            guiGraphics.drawString(font, line, -font.width(line) / 2, lineIndex * font.lineHeight,
+                    NAME_COLOR, false);
+        }
+        guiGraphics.pose().popPose();
+    }
+
+    private void renderIcon(GuiGraphics guiGraphics) {
+        int frameX = x + (WIDTH - ICON_FRAME_SIZE) / 2;
+        int frameY = y + ICON_FRAME_TOP;
+        guiGraphics.blit(COMPONENTS, frameX, frameY, (slot.tier() - 1) * ICON_FRAME_STRIDE_U, ICON_FRAME_ROW_V,
+                ICON_FRAME_SIZE, ICON_FRAME_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
+        slot.icon().ifPresent(iconTexture -> guiGraphics.blit(iconTexture,
+                frameX + ICON_INSET, frameY + ICON_INSET, 0.0F, 0.0F,
+                ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE));
     }
 
     private static String labelKey(FatestoneActionPayload.Action action) {

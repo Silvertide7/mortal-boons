@@ -7,6 +7,7 @@ import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
@@ -38,11 +39,14 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
                 AllowedActions::new);
     }
 
-    public record SlotDisplay(Component title, List<Component> lines, int tier) {
+    public record SlotDisplay(Component title, List<Component> lines, int tier, Optional<ResourceLocation> icon,
+                              Component name) {
         public static final StreamCodec<RegistryFriendlyByteBuf, SlotDisplay> STREAM_CODEC = StreamCodec.composite(
                 ComponentSerialization.TRUSTED_STREAM_CODEC, SlotDisplay::title,
                 ComponentSerialization.TRUSTED_STREAM_CODEC.apply(ByteBufCodecs.list()), SlotDisplay::lines,
                 ByteBufCodecs.VAR_INT, SlotDisplay::tier,
+                ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs::optional), SlotDisplay::icon,
+                ComponentSerialization.TRUSTED_STREAM_CODEC, SlotDisplay::name,
                 SlotDisplay::new);
     }
 
@@ -72,9 +76,11 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
             if (slotIndex < heldBoons.size()) {
                 slots.add(heldSlot(heldBoons.get(slotIndex)));
             } else if (slotIndex < power) {
-                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.empty"), List.of(), 0));
+                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.empty"), List.of(), 0,
+                        Optional.empty(), Component.empty()));
             } else {
-                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of(), 0));
+                slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of(), 0,
+                        Optional.empty(), Component.empty()));
             }
         }
         return new FatestoneScreenPayload(power, candlesLit, beaconBelow, allowedActions, pos, slots);
@@ -84,7 +90,8 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
         Optional<Boon> boonLookup = BoonManager.get(held.boonId());
         Tier tier = Tier.fromLevel(held.tier());
         if (boonLookup.isEmpty()) {
-            return new SlotDisplay(Component.literal(held.boonId().toString()), List.of(), held.tier());
+            Component rawId = Component.literal(held.boonId().toString());
+            return new SlotDisplay(rawId, List.of(), held.tier(), Optional.empty(), rawId);
         }
         Boon boon = boonLookup.get();
         Component title = Component.empty()
@@ -97,7 +104,7 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
         boon.attributeGrants(held.tier()).forEach(grant -> lines.add(describeAttribute(grant)));
         boon.abilityGrants().forEach(spec -> lines.add(Component.translatable("mortal_boons.screen.ability_grant",
                 spec.abilityId().toString(), spec.abilityLevel().resolve(held.tier()))));
-        return new SlotDisplay(title, lines, held.tier());
+        return new SlotDisplay(title, lines, held.tier(), boon.iconTexture(held.tier()), boon.displayName());
     }
 
     private static Component describeAttribute(AttributeGrant grant) {

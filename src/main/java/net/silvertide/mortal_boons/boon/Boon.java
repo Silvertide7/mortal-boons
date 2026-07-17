@@ -10,9 +10,11 @@ import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 import java.util.List;
+import java.util.Optional;
 
 public record Boon(ResourceLocation id, int weight, int minTier, int maxTier,
-                   List<TierScaledAttribute> tierScaledAttributes, List<AbilityGrantSpec> abilityGrants) {
+                   List<TierScaledAttribute> tierScaledAttributes, List<AbilityGrantSpec> abilityGrants,
+                   Optional<LeveledValue<ResourceLocation>> icon) {
 
     public record TierScaledAttribute(Holder<Attribute> attribute, LeveledValue<Double> amount,
                                       AttributeModifier.Operation operation) {
@@ -38,7 +40,8 @@ public record Boon(ResourceLocation id, int weight, int minTier, int maxTier,
 
     public record Definition(int weight, int minTier, int maxTier,
                              List<TierScaledAttribute> tierScaledAttributes,
-                             List<AbilityGrantSpec> abilityGrants) {
+                             List<AbilityGrantSpec> abilityGrants,
+                             Optional<LeveledValue<ResourceLocation>> icon) {
         public static final Codec<Definition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("weight", 10).forGetter(Definition::weight),
                 Codec.intRange(1, 4).optionalFieldOf("min_tier", 1).forGetter(Definition::minTier),
@@ -46,11 +49,12 @@ public record Boon(ResourceLocation id, int weight, int minTier, int maxTier,
                 TierScaledAttribute.CODEC.listOf().optionalFieldOf("attribute_grants", List.of())
                         .forGetter(Definition::tierScaledAttributes),
                 AbilityGrantSpec.CODEC.listOf().optionalFieldOf("ability_grants", List.of())
-                        .forGetter(Definition::abilityGrants)
+                        .forGetter(Definition::abilityGrants),
+                LeveledValue.codec(ResourceLocation.CODEC).optionalFieldOf("icon").forGetter(Definition::icon)
         ).apply(instance, Definition::new));
 
         public Boon toBoon(ResourceLocation id) {
-            return new Boon(id, weight, minTier, maxTier, tierScaledAttributes, abilityGrants);
+            return new Boon(id, weight, minTier, maxTier, tierScaledAttributes, abilityGrants, icon);
         }
     }
 
@@ -60,6 +64,18 @@ public record Boon(ResourceLocation id, int weight, int minTier, int maxTier,
 
     public boolean requiresPlayerAbilities() {
         return tierScaledAttributes.isEmpty() && !abilityGrants.isEmpty();
+    }
+
+    public Optional<ResourceLocation> iconTexture(int tier) {
+        if (icon.isPresent()) {
+            return Optional.of(icon.get().resolve(tier));
+        }
+        if (!abilityGrants.isEmpty()) {
+            ResourceLocation abilityId = abilityGrants.getFirst().abilityId();
+            return Optional.of(ResourceLocation.fromNamespaceAndPath(abilityId.getNamespace(),
+                    "textures/ability/" + abilityId.getPath() + ".png"));
+        }
+        return Optional.empty();
     }
 
     public Component displayName() {
