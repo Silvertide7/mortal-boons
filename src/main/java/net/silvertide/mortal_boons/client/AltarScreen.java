@@ -64,10 +64,26 @@ public class AltarScreen extends Screen {
         menuLeft = (width - MENU_WIDTH) / 2;
         menuTop = (height - MENU_HEIGHT) / 2;
         cards.clear();
+        int prayIndex = -1;
+        for (int slotIndex = 0; slotIndex < data.slots().size(); slotIndex++) {
+            if (data.slots().get(slotIndex).tier() == 0 && slotIndex < data.altarPower()) {
+                prayIndex = slotIndex;
+                break;
+            }
+        }
         for (int slotIndex = 0; slotIndex < data.slots().size(); slotIndex++) {
             cards.add(new BoonCard(data, slotIndex,
-                    menuLeft + CARD_ROW_LEFT + slotIndex * CARD_SLOT_SPACING, menuTop + CARD_Y));
+                    menuLeft + CARD_ROW_LEFT + displayColumn(slotIndex) * CARD_SLOT_SPACING, menuTop + CARD_Y,
+                    slotIndex == prayIndex));
         }
+    }
+
+    private static int displayColumn(int slotIndex) {
+        return switch (slotIndex) {
+            case 0 -> 1;
+            case 1 -> 0;
+            default -> 2;
+        };
     }
 
     @Override
@@ -93,7 +109,9 @@ public class AltarScreen extends Screen {
         if (hoveredIndex >= 0) {
             BoonCard hoveredCard = cards.get(hoveredIndex);
             hoveredCard.render(guiGraphics, font, mouseX, mouseY, true);
-            guiGraphics.renderComponentTooltip(font, hoveredCard.tooltipLines(), mouseX, mouseY);
+            if (hoveredCard.showsTooltip()) {
+                guiGraphics.renderComponentTooltip(font, hoveredCard.tooltipLines(), mouseX, mouseY);
+            }
         }
     }
 

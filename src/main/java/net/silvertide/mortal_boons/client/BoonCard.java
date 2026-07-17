@@ -22,7 +22,7 @@ public class BoonCard {
     private static final int CARD_V = 0;
     private static final int CONTENT_X = 3;
     private static final int CONTENT_WIDTH = 38;
-    private static final int BUTTON_STACK_BOTTOM = 48;
+    private static final int BUTTON_STACK_BOTTOM = 50;
     private static final int BUTTON_GAP = 1;
     private static final float HOVERED_SCALE = 1.05F;
     private static final float SHADOW_ALPHA = 0.15F;
@@ -33,7 +33,7 @@ public class BoonCard {
     private final int y;
     private final List<CardButton> buttons = new ArrayList<>();
 
-    public BoonCard(AltarScreenPayload payload, int slotIndex, int x, int y) {
+    public BoonCard(AltarScreenPayload payload, int slotIndex, int x, int y, boolean praySlot) {
         this.slot = payload.slots().get(slotIndex);
         this.x = x;
         this.y = y;
@@ -41,11 +41,17 @@ public class BoonCard {
             List<AltarActionPayload.Action> actions = allowedActions(payload.allowedActions());
             for (int actionIndex = 0; actionIndex < actions.size(); actionIndex++) {
                 AltarActionPayload.Action action = actions.get(actionIndex);
-                buttons.add(new CardButton(buttonX(), buttonY(actionIndex, actions.size()), slot.tier(),
+                buttons.add(CardButton.action(buttonX(), buttonY(actionIndex, actions.size()), slot.tier(),
                         Component.translatable(labelKey(action)),
                         () -> PacketDistributor.sendToServer(
                                 new AltarActionPayload(payload.altarPos(), action, slotIndex))));
             }
+        } else if (praySlot) {
+            buttons.add(CardButton.pray(x + (WIDTH - CardButton.PRAY_WIDTH) / 2,
+                    y + (HEIGHT - CardButton.PRAY_HEIGHT) / 2,
+                    Component.translatable(labelKey(AltarActionPayload.Action.ROLL)),
+                    () -> PacketDistributor.sendToServer(
+                            new AltarActionPayload(payload.altarPos(), AltarActionPayload.Action.ROLL, slotIndex))));
         }
     }
 
@@ -95,8 +101,15 @@ public class BoonCard {
         return lines;
     }
 
+    public boolean showsTooltip() {
+        return hasCard() || buttons.isEmpty();
+    }
+
     public void render(GuiGraphics guiGraphics, Font font, int mouseX, int mouseY, boolean hovered) {
         if (!hasCard()) {
+            for (CardButton button : buttons) {
+                button.render(guiGraphics, font, mouseX, mouseY);
+            }
             return;
         }
         guiGraphics.pose().pushPose();
@@ -123,7 +136,7 @@ public class BoonCard {
 
     private static String labelKey(AltarActionPayload.Action action) {
         return switch (action) {
-            case ROLL -> "mortal_boons.screen.button.roll";
+            case ROLL -> "mortal_boons.screen.button.pray";
             case REROLL -> "mortal_boons.screen.button.reroll";
             case REFORGE -> "mortal_boons.screen.button.reforge";
             case FORSAKE -> "mortal_boons.screen.button.forsake";
@@ -131,12 +144,12 @@ public class BoonCard {
     }
 
     private int buttonX() {
-        return x + CONTENT_X + (CONTENT_WIDTH - CardButton.WIDTH) / 2;
+        return x + CONTENT_X + (CONTENT_WIDTH - CardButton.ACTION_WIDTH) / 2;
     }
 
     private int buttonY(int buttonIndex, int buttonCount) {
         int buttonsBelow = buttonCount - buttonIndex;
-        return y + BUTTON_STACK_BOTTOM - buttonsBelow * CardButton.HEIGHT
+        return y + BUTTON_STACK_BOTTOM - buttonsBelow * CardButton.ACTION_HEIGHT
                 - (buttonsBelow - 1) * BUTTON_GAP;
     }
 }

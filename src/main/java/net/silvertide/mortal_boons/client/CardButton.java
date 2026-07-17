@@ -7,40 +7,65 @@ import net.minecraft.resources.ResourceLocation;
 import net.silvertide.mortal_boons.MortalBoons;
 
 public class CardButton {
-    public static final int WIDTH = 34;
-    public static final int HEIGHT = 11;
+    public static final int ACTION_WIDTH = 34;
+    public static final int ACTION_HEIGHT = 11;
+    public static final int PRAY_WIDTH = 44;
+    public static final int PRAY_HEIGHT = 17;
 
     private static final ResourceLocation COMPONENTS = MortalBoons.id("textures/gui/menu_components.png");
     private static final int TEXTURE_SIZE = 256;
-    private static final int NORMAL_U = 0;
-    private static final int HOVERED_U = 35;
-    private static final int PRESSED_U = 70;
-    private static final int ROW_BASE_V = 60;
-    private static final int ROW_STRIDE_V = 12;
-    private static final int TEXT_AREA_X = 3;
-    private static final int TEXT_AREA_Y = 2;
-    private static final int TEXT_AREA_WIDTH = 28;
-    private static final int TEXT_AREA_HEIGHT = 6;
+    private static final int ACTION_ROW_BASE_V = 60;
+    private static final int ACTION_ROW_STRIDE_V = 12;
+    private static final int ACTION_TEXT_CENTER_X = 3 + 28 / 2;
+    private static final int ACTION_TEXT_CENTER_Y = 2 + 6 / 2;
+    private static final int PRAY_ROW_V = 149;
     private static final int TEXT_GLYPH_HEIGHT = 8;
+    private static final float TEXT_SCALE = 0.6F;
     private static final int TEXT_COLOR = 0xEED3AB;
 
     private final int x;
     private final int y;
-    private final int tier;
+    private final int width;
+    private final int height;
+    private final int normalU;
+    private final int hoveredU;
+    private final int pressedU;
+    private final int rowV;
+    private final float labelCenterX;
+    private final float labelCenterY;
     private final Component label;
     private final Runnable onPress;
     private boolean pressed;
 
-    public CardButton(int x, int y, int tier, Component label, Runnable onPress) {
+    private CardButton(int x, int y, int width, int height, int rowV, float labelCenterX, float labelCenterY,
+                       Component label, Runnable onPress) {
         this.x = x;
         this.y = y;
-        this.tier = tier;
+        this.width = width;
+        this.height = height;
+        this.normalU = 0;
+        this.hoveredU = width + 1;
+        this.pressedU = (width + 1) * 2;
+        this.rowV = rowV;
+        this.labelCenterX = labelCenterX;
+        this.labelCenterY = labelCenterY;
         this.label = label;
         this.onPress = onPress;
     }
 
+    public static CardButton action(int x, int y, int tier, Component label, Runnable onPress) {
+        return new CardButton(x, y, ACTION_WIDTH, ACTION_HEIGHT,
+                ACTION_ROW_BASE_V + (tier - 1) * ACTION_ROW_STRIDE_V,
+                x + ACTION_TEXT_CENTER_X, y + ACTION_TEXT_CENTER_Y, label, onPress);
+    }
+
+    public static CardButton pray(int x, int y, Component label, Runnable onPress) {
+        return new CardButton(x, y, PRAY_WIDTH, PRAY_HEIGHT, PRAY_ROW_V,
+                x + PRAY_WIDTH / 2.0F, y + PRAY_HEIGHT / 2.0F, label, onPress);
+    }
+
     public boolean isMouseOver(double mouseX, double mouseY) {
-        return mouseX >= x && mouseX < x + WIDTH && mouseY >= y && mouseY < y + HEIGHT;
+        return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
     }
 
     public boolean mouseClicked(double mouseX, double mouseY) {
@@ -65,19 +90,15 @@ public class CardButton {
 
     public void render(GuiGraphics guiGraphics, Font font, int mouseX, int mouseY) {
         boolean over = isMouseOver(mouseX, mouseY);
-        int stateU = pressed && over ? PRESSED_U : over ? HOVERED_U : NORMAL_U;
-        int rowV = ROW_BASE_V + (tier - 1) * ROW_STRIDE_V;
-        guiGraphics.blit(COMPONENTS, x, y, stateU, rowV, WIDTH, HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+        int stateU = pressed && over ? pressedU : over ? hoveredU : normalU;
+        guiGraphics.blit(COMPONENTS, x, y, stateU, rowV, width, height, TEXTURE_SIZE, TEXTURE_SIZE);
         drawLabel(guiGraphics, font);
     }
 
     private void drawLabel(GuiGraphics guiGraphics, Font font) {
-        float scale = Math.min(TEXT_AREA_WIDTH / (float) font.width(label),
-                TEXT_AREA_HEIGHT / (float) TEXT_GLYPH_HEIGHT);
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(x + TEXT_AREA_X + TEXT_AREA_WIDTH / 2.0F,
-                y + TEXT_AREA_Y + TEXT_AREA_HEIGHT / 2.0F, 0);
-        guiGraphics.pose().scale(scale, scale, 1.0F);
+        guiGraphics.pose().translate(labelCenterX, labelCenterY, 0);
+        guiGraphics.pose().scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
         guiGraphics.drawString(font, label, -font.width(label) / 2, -TEXT_GLYPH_HEIGHT / 2, TEXT_COLOR, false);
         guiGraphics.pose().popPose();
     }
