@@ -15,21 +15,21 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.silvertide.mortal_boons.MortalBoons;
 
 @EventBusSubscriber(modid = MortalBoons.MODID, bus = EventBusSubscriber.Bus.MOD)
-public final class AltarBlocks {
+public final class FatestoneBlocks {
     private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MortalBoons.MODID);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MortalBoons.MODID);
 
-    public static final DeferredBlock<BoonAltarBlock> BOON_ALTAR = BLOCKS.register("boon_altar",
-            () -> new BoonAltarBlock(BlockBehaviour.Properties.of()
+    public static final DeferredBlock<FatestoneBlock> FATESTONE = BLOCKS.register("fatestone",
+            () -> new FatestoneBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GRAY)
                     .strength(3.0F, 1200.0F)
                     .sound(SoundType.STONE)
-                    .lightLevel(state -> state.getValue(BoonAltarBlock.POWER) == 3 ? 10 : 0)));
+                    .lightLevel(state -> state.getValue(FatestoneBlock.POWER) == 3 ? 10 : 0)));
 
-    public static final DeferredItem<BlockItem> BOON_ALTAR_ITEM =
-            ITEMS.registerSimpleBlockItem("boon_altar", BOON_ALTAR);
+    public static final DeferredItem<BlockItem> FATESTONE_ITEM =
+            ITEMS.registerSimpleBlockItem("fatestone", FATESTONE);
 
-    private AltarBlocks() {
+    private FatestoneBlocks() {
     }
 
     public static void register(IEventBus modEventBus) {
@@ -40,7 +40,7 @@ public final class AltarBlocks {
     @SubscribeEvent
     public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
-            event.accept(BOON_ALTAR_ITEM);
+            event.accept(FATESTONE_ITEM);
         }
     }
 }

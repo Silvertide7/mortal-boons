@@ -14,7 +14,7 @@ public final class BoonConfig {
             .defineInRange("rollXpLevelCostPerRoll", 5, 0, 10000);
 
     public static final ModConfigSpec.IntValue ROLL_COOLDOWN_TICKS = BUILDER
-            .comment("Ticks a player must wait between altar actions (20 ticks = 1 second)")
+            .comment("Ticks a player must wait between Fatestone actions (20 ticks = 1 second)")
             .defineInRange("rollCooldownTicks", 6000, 0, Integer.MAX_VALUE);
 
     public static final ModConfigSpec.IntValue REFORGE_XP_LEVEL_COST = BUILDER

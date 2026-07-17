@@ -14,9 +14,9 @@ public final class BoonNetworking {
     @SubscribeEvent
     public static void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(MortalBoons.MODID).versioned("1");
-        registrar.playToClient(AltarScreenPayload.TYPE, AltarScreenPayload.STREAM_CODEC,
-                ClientPayloadHandlers::handleAltarScreen);
-        registrar.playToServer(AltarActionPayload.TYPE, AltarActionPayload.STREAM_CODEC,
-                ServerPayloadHandlers::handleAltarAction);
+        registrar.playToClient(FatestoneScreenPayload.TYPE, FatestoneScreenPayload.STREAM_CODEC,
+                ClientPayloadHandlers::handleFatestoneScreen);
+        registrar.playToServer(FatestoneActionPayload.TYPE, FatestoneActionPayload.STREAM_CODEC,
+                ServerPayloadHandlers::handleFatestoneAction);
     }
 }

@@ -17,14 +17,14 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.silvertide.mortal_boons.network.AltarScreenPayload;
+import net.silvertide.mortal_boons.network.FatestoneScreenPayload;
 import org.jetbrains.annotations.Nullable;
 
-public class BoonAltarBlock extends Block {
+public class FatestoneBlock extends Block {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty POWER = IntegerProperty.create("power", 1, 3);
 
-    public BoonAltarBlock(Properties properties) {
+    public FatestoneBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
@@ -63,18 +63,18 @@ public class BoonAltarBlock extends Block {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.PASS;
         }
-        PacketDistributor.sendToPlayer(serverPlayer, AltarScreenPayload.snapshot(serverPlayer, pos));
+        PacketDistributor.sendToPlayer(serverPlayer, FatestoneScreenPayload.snapshot(serverPlayer, pos));
         return InteractionResult.CONSUME;
     }
 
-    public static int altarPowerAt(Level level, BlockPos pos) {
+    public static int powerAt(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return state.getBlock() instanceof BoonAltarBlock ? state.getValue(POWER) : 0;
+        return state.getBlock() instanceof FatestoneBlock ? state.getValue(POWER) : 0;
     }
 
     public static boolean hasCandleRing(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return state.getBlock() instanceof BoonAltarBlock
+        return state.getBlock() instanceof FatestoneBlock
                 && hasLitCandlesOnBackAndSides(level, pos, state.getValue(FACING));
     }
 

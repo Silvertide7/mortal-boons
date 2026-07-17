@@ -9,8 +9,8 @@ import net.silvertide.mortal_boons.MortalBoons;
 public class CardButton {
     public static final int ACTION_WIDTH = 34;
     public static final int ACTION_HEIGHT = 11;
-    public static final int PRAY_WIDTH = 44;
-    public static final int PRAY_HEIGHT = 17;
+    public static final int TEMPT_FATE_WIDTH = 44;
+    public static final int TEMPT_FATE_HEIGHT = 17;
 
     private static final ResourceLocation COMPONENTS = MortalBoons.id("textures/gui/menu_components.png");
     private static final int TEXTURE_SIZE = 256;
@@ -18,7 +18,7 @@ public class CardButton {
     private static final int ACTION_ROW_STRIDE_V = 12;
     private static final int ACTION_TEXT_CENTER_X = 3 + 28 / 2;
     private static final int ACTION_TEXT_CENTER_Y = 2 + 6 / 2;
-    private static final int PRAY_ROW_V = 149;
+    private static final int TEMPT_FATE_ROW_V = 149;
     private static final int TEXT_GLYPH_HEIGHT = 8;
     private static final float TEXT_SCALE = 0.6F;
     private static final int TEXT_COLOR = 0xEED3AB;
@@ -59,9 +59,9 @@ public class CardButton {
                 x + ACTION_TEXT_CENTER_X, y + ACTION_TEXT_CENTER_Y, label, onPress);
     }
 
-    public static CardButton pray(int x, int y, Component label, Runnable onPress) {
-        return new CardButton(x, y, PRAY_WIDTH, PRAY_HEIGHT, PRAY_ROW_V,
-                x + PRAY_WIDTH / 2.0F, y + PRAY_HEIGHT / 2.0F, label, onPress);
+    public static CardButton temptFate(int x, int y, Component label, Runnable onPress) {
+        return new CardButton(x, y, TEMPT_FATE_WIDTH, TEMPT_FATE_HEIGHT, TEMPT_FATE_ROW_V,
+                x + TEMPT_FATE_WIDTH / 2.0F, y + TEMPT_FATE_HEIGHT / 2.0F, label, onPress);
     }
 
     public boolean isMouseOver(double mouseX, double mouseY) {

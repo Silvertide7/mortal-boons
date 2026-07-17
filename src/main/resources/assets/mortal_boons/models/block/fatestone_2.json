@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "mortal_boons:block/boon_altar_3"
+    "all": "mortal_boons:block/fatestone_2"
   }
 }

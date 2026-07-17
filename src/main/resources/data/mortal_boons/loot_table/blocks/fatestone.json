@@ -8,9 +8,9 @@
         { "condition": "minecraft:survives_explosion" }
       ],
       "entries": [
-        { "type": "minecraft:item", "name": "mortal_boons:boon_altar" }
+        { "type": "minecraft:item", "name": "mortal_boons:fatestone" }
       ]
     }
   ],
-  "random_sequence": "mortal_boons:blocks/boon_altar"
+  "random_sequence": "mortal_boons:blocks/fatestone"
 }

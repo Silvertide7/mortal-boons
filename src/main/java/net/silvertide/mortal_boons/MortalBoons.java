@@ -11,7 +11,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
-import net.silvertide.mortal_boons.block.AltarBlocks;
+import net.silvertide.mortal_boons.block.FatestoneBlocks;
 import net.silvertide.mortal_boons.config.BoonConfig;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 import org.slf4j.Logger;
@@ -28,7 +28,7 @@ public class MortalBoons {
     public MortalBoons(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, BoonConfig.SPEC);
         BoonAttachments.register(modEventBus);
-        AltarBlocks.register(modEventBus);
+        FatestoneBlocks.register(modEventBus);
         modEventBus.addListener(MortalBoons::addPackFinders);
     }
 

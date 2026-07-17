@@ -7,11 +7,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.silvertide.mortal_boons.MortalBoons;
 
-public record AltarActionPayload(BlockPos altarPos, Action action, int slotIndex) implements CustomPacketPayload {
-    public static final Type<AltarActionPayload> TYPE = new Type<>(MortalBoons.id("altar_action"));
+public record FatestoneActionPayload(BlockPos pos, Action action, int slotIndex) implements CustomPacketPayload {
+    public static final Type<FatestoneActionPayload> TYPE = new Type<>(MortalBoons.id("fatestone_action"));
 
     public enum Action {
-        ROLL,
+        TEMPT_FATE,
         REFORGE,
         REROLL,
         FORSAKE
@@ -20,11 +20,11 @@ public record AltarActionPayload(BlockPos altarPos, Action action, int slotIndex
     private static final StreamCodec<ByteBuf, Action> ACTION_STREAM_CODEC =
             ByteBufCodecs.VAR_INT.map(ordinal -> Action.values()[ordinal], Action::ordinal);
 
-    public static final StreamCodec<ByteBuf, AltarActionPayload> STREAM_CODEC = StreamCodec.composite(
-            BlockPos.STREAM_CODEC, AltarActionPayload::altarPos,
-            ACTION_STREAM_CODEC, AltarActionPayload::action,
-            ByteBufCodecs.VAR_INT, AltarActionPayload::slotIndex,
-            AltarActionPayload::new);
+    public static final StreamCodec<ByteBuf, FatestoneActionPayload> STREAM_CODEC = StreamCodec.composite(
+            BlockPos.STREAM_CODEC, FatestoneActionPayload::pos,
+            ACTION_STREAM_CODEC, FatestoneActionPayload::action,
+            ByteBufCodecs.VAR_INT, FatestoneActionPayload::slotIndex,
+            FatestoneActionPayload::new);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

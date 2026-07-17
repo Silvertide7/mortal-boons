@@ -55,7 +55,7 @@ public final class RollManager {
         boonData.addBoon(new HeldBoon(boon.id(), tier));
         boonData.incrementLifetimeRollCount();
         BoonEffects.apply(player, boon, tier);
-        playAltarEffects(player, SoundEvents.ENCHANTMENT_TABLE_USE, tier);
+        playFatestoneEffects(player, SoundEvents.ENCHANTMENT_TABLE_USE, tier);
         player.displayClientMessage(Component.translatable("mortal_boons.roll.success",
                 boon.displayName(), Tier.fromLevel(tier).displayName()), false);
         return true;
@@ -88,7 +88,7 @@ public final class RollManager {
         chargeXpAndStartCooldown(player, gameTime, cost);
         boonData.replaceBoonAt(slotIndex, new HeldBoon(boon.id(), newTier));
         BoonEffects.apply(player, boon, newTier);
-        playAltarEffects(player, SoundEvents.ANVIL_USE, newTier);
+        playFatestoneEffects(player, SoundEvents.ANVIL_USE, newTier);
         player.displayClientMessage(Component.translatable("mortal_boons.reforge.success",
                 boon.displayName(), Tier.fromLevel(newTier).displayName()), false);
         return true;
@@ -130,7 +130,7 @@ public final class RollManager {
                 BoonEffects.remove(player, oldBoon, removed.tier()));
         boonData.replaceBoonAt(slotIndex, new HeldBoon(newBoon.id(), newTier));
         BoonEffects.apply(player, newBoon, newTier);
-        playAltarEffects(player, SoundEvents.EVOKER_CAST_SPELL, newTier);
+        playFatestoneEffects(player, SoundEvents.EVOKER_CAST_SPELL, newTier);
         player.displayClientMessage(Component.translatable("mortal_boons.reroll.success",
                 removedName, newBoon.displayName(), Tier.fromLevel(newTier).displayName()), false);
         return true;
@@ -181,7 +181,7 @@ public final class RollManager {
         return true;
     }
 
-    private static void playAltarEffects(ServerPlayer player, SoundEvent sound, int tier) {
+    private static void playFatestoneEffects(ServerPlayer player, SoundEvent sound, int tier) {
         ServerLevel level = player.serverLevel();
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 sound, SoundSource.BLOCKS, 1.0F, 0.7F + 0.15F * tier);

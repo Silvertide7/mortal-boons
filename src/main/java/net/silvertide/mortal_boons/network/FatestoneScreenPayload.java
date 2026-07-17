@@ -11,11 +11,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.silvertide.mortal_boons.MortalBoons;
+import net.silvertide.mortal_boons.block.FatestoneBlock;
 import net.silvertide.mortal_boons.boon.AttributeGrant;
 import net.silvertide.mortal_boons.boon.Boon;
 import net.silvertide.mortal_boons.boon.BoonManager;
 import net.silvertide.mortal_boons.boon.HeldBoon;
-import net.silvertide.mortal_boons.block.BoonAltarBlock;
 import net.silvertide.mortal_boons.boon.Tier;
 import net.silvertide.mortal_boons.config.BoonConfig;
 import net.silvertide.mortal_boons.data.BoonAttachments;
@@ -25,10 +25,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean beaconBelow,
-                                 AllowedActions allowedActions, BlockPos altarPos,
-                                 List<SlotDisplay> slots) implements CustomPacketPayload {
-    public static final Type<AltarScreenPayload> TYPE = new Type<>(MortalBoons.id("altar_screen"));
+public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beaconBelow,
+                                     AllowedActions allowedActions, BlockPos pos,
+                                     List<SlotDisplay> slots) implements CustomPacketPayload {
+    public static final Type<FatestoneScreenPayload> TYPE = new Type<>(MortalBoons.id("fatestone_screen"));
 
     public record AllowedActions(boolean reroll, boolean reforge, boolean forsake) {
         public static final StreamCodec<RegistryFriendlyByteBuf, AllowedActions> STREAM_CODEC = StreamCodec.composite(
@@ -46,24 +46,24 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
                 SlotDisplay::new);
     }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, AltarScreenPayload> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, AltarScreenPayload::altarPower,
-            ByteBufCodecs.BOOL, AltarScreenPayload::candlesLit,
-            ByteBufCodecs.BOOL, AltarScreenPayload::beaconBelow,
-            AllowedActions.STREAM_CODEC, AltarScreenPayload::allowedActions,
-            BlockPos.STREAM_CODEC, AltarScreenPayload::altarPos,
-            SlotDisplay.STREAM_CODEC.apply(ByteBufCodecs.list()), AltarScreenPayload::slots,
-            AltarScreenPayload::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, FatestoneScreenPayload> STREAM_CODEC = StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, FatestoneScreenPayload::power,
+            ByteBufCodecs.BOOL, FatestoneScreenPayload::candlesLit,
+            ByteBufCodecs.BOOL, FatestoneScreenPayload::beaconBelow,
+            AllowedActions.STREAM_CODEC, FatestoneScreenPayload::allowedActions,
+            BlockPos.STREAM_CODEC, FatestoneScreenPayload::pos,
+            SlotDisplay.STREAM_CODEC.apply(ByteBufCodecs.list()), FatestoneScreenPayload::slots,
+            FatestoneScreenPayload::new);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
     }
 
-    public static AltarScreenPayload snapshot(ServerPlayer player, BlockPos altarPos) {
-        boolean candlesLit = BoonAltarBlock.hasCandleRing(player.serverLevel(), altarPos);
-        boolean beaconBelow = BoonAltarBlock.hasBeaconBelow(player.serverLevel(), altarPos);
-        int altarPower = BoonAltarBlock.altarPowerAt(player.serverLevel(), altarPos);
+    public static FatestoneScreenPayload snapshot(ServerPlayer player, BlockPos pos) {
+        boolean candlesLit = FatestoneBlock.hasCandleRing(player.serverLevel(), pos);
+        boolean beaconBelow = FatestoneBlock.hasBeaconBelow(player.serverLevel(), pos);
+        int power = FatestoneBlock.powerAt(player.serverLevel(), pos);
         AllowedActions allowedActions = new AllowedActions(BoonConfig.ALLOW_REROLL.get(),
                 BoonConfig.ALLOW_REFORGE.get(), BoonConfig.ALLOW_FORSAKE.get());
         List<HeldBoon> heldBoons = player.getData(BoonAttachments.BOON_DATA).getHeldBoons();
@@ -71,13 +71,13 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
         for (int slotIndex = 0; slotIndex < RollManager.MAX_BOONS; slotIndex++) {
             if (slotIndex < heldBoons.size()) {
                 slots.add(heldSlot(heldBoons.get(slotIndex)));
-            } else if (slotIndex < altarPower) {
+            } else if (slotIndex < power) {
                 slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.empty"), List.of(), 0));
             } else {
                 slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of(), 0));
             }
         }
-        return new AltarScreenPayload(altarPower, candlesLit, beaconBelow, allowedActions, altarPos, slots);
+        return new FatestoneScreenPayload(power, candlesLit, beaconBelow, allowedActions, pos, slots);
     }
 
     private static SlotDisplay heldSlot(HeldBoon held) {

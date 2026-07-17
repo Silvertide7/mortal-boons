@@ -6,19 +6,19 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.silvertide.mortal_boons.MortalBoons;
-import net.silvertide.mortal_boons.network.AltarScreenPayload;
+import net.silvertide.mortal_boons.network.FatestoneScreenPayload;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class AltarScreen extends Screen {
+public class FatestoneScreen extends Screen {
     private static final ResourceLocation BACKGROUND = MortalBoons.id("textures/gui/menu_altar.png");
     private static final ResourceLocation BACKGROUND_BEACON = MortalBoons.id("textures/gui/menu_altar_beacon.png");
     private static final ResourceLocation COMPONENTS = MortalBoons.id("textures/gui/menu_components.png");
     private static final int TEXTURE_SIZE = 256;
     private static final int MENU_WIDTH = 232;
     private static final int MENU_HEIGHT = 246;
-    private static final int CARD_ROW_LEFT = 44;
+    private static final int CARD_ROW_LEFT = 45;
     private static final int CARD_GAP = 5;
     private static final int CARD_SLOT_SPACING = BoonCard.WIDTH + CARD_GAP;
     private static final int CARD_AREA_TOP = 75;
@@ -44,12 +44,12 @@ public class AltarScreen extends Screen {
     private static final int LEFT_SMALL_CANDLE_FRAME_OFFSET = 2;
     private static final int RIGHT_SMALL_CANDLE_FRAME_OFFSET = 6;
 
-    private final AltarScreenPayload data;
+    private final FatestoneScreenPayload data;
     private final List<BoonCard> cards = new ArrayList<>();
     private int menuLeft;
     private int menuTop;
 
-    public AltarScreen(AltarScreenPayload data) {
+    public FatestoneScreen(FatestoneScreenPayload data) {
         super(Component.translatable("mortal_boons.screen.title"));
         this.data = data;
     }
@@ -66,7 +66,7 @@ public class AltarScreen extends Screen {
         cards.clear();
         int prayIndex = -1;
         for (int slotIndex = 0; slotIndex < data.slots().size(); slotIndex++) {
-            if (data.slots().get(slotIndex).tier() == 0 && slotIndex < data.altarPower()) {
+            if (data.slots().get(slotIndex).tier() == 0 && slotIndex < data.power()) {
                 prayIndex = slotIndex;
                 break;
             }
