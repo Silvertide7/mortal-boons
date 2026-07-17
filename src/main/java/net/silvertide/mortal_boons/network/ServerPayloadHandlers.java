@@ -28,14 +28,15 @@ public final class ServerPayloadHandlers {
                 case ROLL -> RollManager.roll(serverPlayer, altarPower);
                 case REFORGE -> {
                     if (altarPower >= 2) {
-                        RollManager.reforge(serverPlayer);
+                        RollManager.reforge(serverPlayer, payload.slotIndex());
                     }
                 }
                 case REROLL -> {
                     if (altarPower >= 3) {
-                        RollManager.reroll(serverPlayer);
+                        RollManager.reroll(serverPlayer, payload.slotIndex());
                     }
                 }
+                case FORSAKE -> RollManager.forsake(serverPlayer, payload.slotIndex());
             }
             PacketDistributor.sendToPlayer(serverPlayer,
                     AltarScreenPayload.snapshot(serverPlayer, payload.altarPos()));

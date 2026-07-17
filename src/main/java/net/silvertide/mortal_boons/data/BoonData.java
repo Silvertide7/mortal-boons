@@ -45,6 +45,10 @@ public class BoonData {
         heldBoons.set(index, replacement);
     }
 
+    public void removeBoonAt(int index) {
+        heldBoons.remove(index);
+    }
+
     public int getLifetimeRollCount() {
         return lifetimeRollCount;
     }

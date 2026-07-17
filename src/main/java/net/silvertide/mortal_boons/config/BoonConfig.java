@@ -29,6 +29,18 @@ public final class BoonConfig {
             .comment("Whether all 3 boon slots must be filled before a boon can be rerolled")
             .define("rerollRequiresFullSlots", true);
 
+    public static final ModConfigSpec.BooleanValue ALLOW_REROLL = BUILDER
+            .comment("Whether boons can be rerolled (replaced with a new random boon)")
+            .define("allowReroll", true);
+
+    public static final ModConfigSpec.BooleanValue ALLOW_REFORGE = BUILDER
+            .comment("Whether boons can be reforged (tier rerolled)")
+            .define("allowReforge", true);
+
+    public static final ModConfigSpec.BooleanValue ALLOW_FORSAKE = BUILDER
+            .comment("Whether boons can be forsaken (removed, leaving the slot empty)")
+            .define("allowForsake", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     private BoonConfig() {

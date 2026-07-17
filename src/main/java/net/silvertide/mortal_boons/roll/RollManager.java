@@ -20,7 +20,6 @@ import net.silvertide.mortal_boons.data.BoonData;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
 
 public final class RollManager {
     public static final int MAX_BOONS = 3;
@@ -62,25 +61,32 @@ public final class RollManager {
         return true;
     }
 
-    public static boolean reforge(ServerPlayer player) {
+    public static boolean reforge(ServerPlayer player, int slotIndex) {
+        if (!BoonConfig.ALLOW_REFORGE.get()) {
+            player.displayClientMessage(Component.translatable("mortal_boons.reforge.disabled"), false);
+            return false;
+        }
         BoonData boonData = player.getData(BoonAttachments.BOON_DATA);
         long gameTime = player.level().getGameTime();
         List<HeldBoon> heldBoons = boonData.getHeldBoons();
-        List<Integer> reforgeableIndices = knownBoonIndices(heldBoons);
-        if (reforgeableIndices.isEmpty()) {
-            player.displayClientMessage(Component.translatable("mortal_boons.reforge.none"), false);
+        if (slotIndex < 0 || slotIndex >= heldBoons.size()) {
+            rejectInvalidSlot(player);
+            return false;
+        }
+        HeldBoon current = heldBoons.get(slotIndex);
+        Optional<Boon> boonLookup = BoonManager.get(current.boonId());
+        if (boonLookup.isEmpty()) {
+            rejectInvalidSlot(player);
             return false;
         }
         int cost = BoonConfig.REFORGE_XP_LEVEL_COST.get();
         if (rejectIfOnCooldown(player, gameTime) || rejectIfCannotAfford(player, cost)) {
             return false;
         }
-        int reforgedIndex = reforgeableIndices.get(player.getRandom().nextInt(reforgeableIndices.size()));
-        HeldBoon current = heldBoons.get(reforgedIndex);
-        Boon boon = BoonManager.get(current.boonId()).orElseThrow();
+        Boon boon = boonLookup.get();
         int newTier = rollTier(player.getRandom(), boon);
         chargeXpAndStartCooldown(player, gameTime, cost);
-        boonData.replaceBoonAt(reforgedIndex, new HeldBoon(boon.id(), newTier));
+        boonData.replaceBoonAt(slotIndex, new HeldBoon(boon.id(), newTier));
         BoonEffects.apply(player, boon, newTier);
         playAltarEffects(player, SoundEvents.ANVIL_USE, newTier);
         player.displayClientMessage(Component.translatable("mortal_boons.reforge.success",
@@ -88,16 +94,20 @@ public final class RollManager {
         return true;
     }
 
-    public static boolean reroll(ServerPlayer player) {
+    public static boolean reroll(ServerPlayer player, int slotIndex) {
+        if (!BoonConfig.ALLOW_REROLL.get()) {
+            player.displayClientMessage(Component.translatable("mortal_boons.reroll.disabled"), false);
+            return false;
+        }
         BoonData boonData = player.getData(BoonAttachments.BOON_DATA);
         long gameTime = player.level().getGameTime();
         List<HeldBoon> heldBoons = boonData.getHeldBoons();
-        if (heldBoons.isEmpty()) {
-            player.displayClientMessage(Component.translatable("mortal_boons.reroll.none"), false);
-            return false;
-        }
         if (BoonConfig.REROLL_REQUIRES_FULL_SLOTS.get() && heldBoons.size() < MAX_BOONS) {
             player.displayClientMessage(Component.translatable("mortal_boons.reroll.requires_full", MAX_BOONS), false);
+            return false;
+        }
+        if (slotIndex < 0 || slotIndex >= heldBoons.size()) {
+            rejectInvalidSlot(player);
             return false;
         }
         int cost = BoonConfig.REROLL_XP_LEVEL_COST.get();
@@ -109,8 +119,7 @@ public final class RollManager {
             player.displayClientMessage(Component.translatable("mortal_boons.roll.none_available"), false);
             return false;
         }
-        int removedIndex = player.getRandom().nextInt(heldBoons.size());
-        HeldBoon removed = heldBoons.get(removedIndex);
+        HeldBoon removed = heldBoons.get(slotIndex);
         Component removedName = BoonManager.get(removed.boonId())
                 .map(Boon::displayName)
                 .orElse(Component.literal(removed.boonId().toString()));
@@ -119,7 +128,7 @@ public final class RollManager {
         chargeXpAndStartCooldown(player, gameTime, cost);
         BoonManager.get(removed.boonId()).ifPresent(oldBoon ->
                 BoonEffects.remove(player, oldBoon, removed.tier()));
-        boonData.replaceBoonAt(removedIndex, new HeldBoon(newBoon.id(), newTier));
+        boonData.replaceBoonAt(slotIndex, new HeldBoon(newBoon.id(), newTier));
         BoonEffects.apply(player, newBoon, newTier);
         playAltarEffects(player, SoundEvents.EVOKER_CAST_SPELL, newTier);
         player.displayClientMessage(Component.translatable("mortal_boons.reroll.success",
@@ -127,11 +136,30 @@ public final class RollManager {
         return true;
     }
 
-    private static List<Integer> knownBoonIndices(List<HeldBoon> heldBoons) {
-        return IntStream.range(0, heldBoons.size())
-                .filter(index -> BoonManager.get(heldBoons.get(index).boonId()).isPresent())
-                .boxed()
-                .toList();
+    public static boolean forsake(ServerPlayer player, int slotIndex) {
+        if (!BoonConfig.ALLOW_FORSAKE.get()) {
+            player.displayClientMessage(Component.translatable("mortal_boons.forsake.disabled"), false);
+            return false;
+        }
+        BoonData boonData = player.getData(BoonAttachments.BOON_DATA);
+        List<HeldBoon> heldBoons = boonData.getHeldBoons();
+        if (slotIndex < 0 || slotIndex >= heldBoons.size()) {
+            rejectInvalidSlot(player);
+            return false;
+        }
+        HeldBoon removed = heldBoons.get(slotIndex);
+        Component removedName = BoonManager.get(removed.boonId())
+                .map(Boon::displayName)
+                .orElse(Component.literal(removed.boonId().toString()));
+        BoonManager.get(removed.boonId()).ifPresent(boon ->
+                BoonEffects.remove(player, boon, removed.tier()));
+        boonData.removeBoonAt(slotIndex);
+        player.displayClientMessage(Component.translatable("mortal_boons.forsake.success", removedName), false);
+        return true;
+    }
+
+    private static void rejectInvalidSlot(ServerPlayer player) {
+        player.displayClientMessage(Component.translatable("mortal_boons.action.invalid_slot"), false);
     }
 
     private static boolean rejectIfOnCooldown(ServerPlayer player, long gameTime) {

@@ -1,13 +1,11 @@
 package net.silvertide.mortal_boons.client;
 
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.silvertide.mortal_boons.MortalBoons;
-import net.silvertide.mortal_boons.network.AltarActionPayload;
 import net.silvertide.mortal_boons.network.AltarScreenPayload;
 
 import java.util.ArrayList;
@@ -20,26 +18,34 @@ public class AltarScreen extends Screen {
     private static final int TEXTURE_SIZE = 256;
     private static final int MENU_WIDTH = 232;
     private static final int MENU_HEIGHT = 246;
-    private static final int MENU_CENTER_X = 116;
-    private static final int CARD_WIDTH = 43;
-    private static final int CARD_HEIGHT = 57;
-    private static final int[] CARD_U_BY_TIER = {0, 45, 90, 135};
-    private static final int CARD_V = 0;
+    private static final int CARD_ROW_LEFT = 44;
+    private static final int CARD_GAP = 5;
+    private static final int CARD_SLOT_SPACING = BoonCard.WIDTH + CARD_GAP;
     private static final int CARD_AREA_TOP = 75;
     private static final int CARD_AREA_HEIGHT = 67;
-    private static final int CARD_ROW_LEFT = 45;
-    private static final int CARD_GAP = 6;
-    private static final int CARD_SLOT_SPACING = CARD_WIDTH + CARD_GAP;
-    private static final int CARD_Y = CARD_AREA_TOP + (CARD_AREA_HEIGHT - CARD_HEIGHT) / 2;
-    private static final float HOVERED_CARD_SCALE = 1.05F;
-    private static final float CARD_SHADOW_ALPHA = 0.35F;
-    private static final int CARD_SHADOW_OFFSET = 2;
-    private static final int BUTTON_WIDTH = 66;
-    private static final int BUTTON_HEIGHT = 20;
-    private static final int BUTTON_GAP = 5;
-    private static final int BUTTON_TOP = 155;
+    private static final int CARD_Y = CARD_AREA_TOP + (CARD_AREA_HEIGHT - BoonCard.HEIGHT) / 2 - 1;
+    private static final int FLAME_FRAME_TIME_MS = 150;
+    private static final int BIG_FLAME_ROW_V = 130;
+    private static final int BIG_FLAME_WIDTH = 6;
+    private static final int BIG_FLAME_HEIGHT = 10;
+    private static final int BIG_FLAME_FRAME_COUNT = 8;
+    private static final int LEFT_BIG_CANDLE_X = 32;
+    private static final int RIGHT_BIG_CANDLE_X = 193;
+    private static final int BIG_CANDLE_Y = 39;
+    private static final int LEFT_BIG_CANDLE_FRAME_OFFSET = 1;
+    private static final int RIGHT_BIG_CANDLE_FRAME_OFFSET = 4;
+    private static final int SMALL_FLAME_ROW_V = 140;
+    private static final int SMALL_FLAME_WIDTH = 4;
+    private static final int SMALL_FLAME_HEIGHT = 8;
+    private static final int SMALL_FLAME_FRAME_COUNT = 8;
+    private static final int LEFT_SMALL_CANDLE_X = 17;
+    private static final int RIGHT_SMALL_CANDLE_X = 210;
+    private static final int SMALL_CANDLE_Y = 171;
+    private static final int LEFT_SMALL_CANDLE_FRAME_OFFSET = 2;
+    private static final int RIGHT_SMALL_CANDLE_FRAME_OFFSET = 6;
 
     private final AltarScreenPayload data;
+    private final List<BoonCard> cards = new ArrayList<>();
     private int menuLeft;
     private int menuTop;
 
@@ -57,25 +63,11 @@ public class AltarScreen extends Screen {
     protected void init() {
         menuLeft = (width - MENU_WIDTH) / 2;
         menuTop = (height - MENU_HEIGHT) / 2;
-        int buttonY = menuTop + BUTTON_TOP;
-        int rowWidth = BUTTON_WIDTH * 3 + BUTTON_GAP * 2;
-        int rowStartX = menuLeft + MENU_CENTER_X - rowWidth / 2;
-        addRenderableWidget(actionButton("mortal_boons.screen.button.roll", AltarActionPayload.Action.ROLL,
-                rowStartX, buttonY, true));
-        addRenderableWidget(actionButton("mortal_boons.screen.button.reforge", AltarActionPayload.Action.REFORGE,
-                rowStartX + BUTTON_WIDTH + BUTTON_GAP, buttonY, data.altarPower() >= 2));
-        addRenderableWidget(actionButton("mortal_boons.screen.button.reroll", AltarActionPayload.Action.REROLL,
-                rowStartX + (BUTTON_WIDTH + BUTTON_GAP) * 2, buttonY, data.altarPower() >= 3));
-    }
-
-    private Button actionButton(String translationKey, AltarActionPayload.Action action, int x, int y,
-                                boolean enabled) {
-        Button button = Button.builder(Component.translatable(translationKey),
-                        pressed -> PacketDistributor.sendToServer(new AltarActionPayload(data.altarPos(), action)))
-                .bounds(x, y, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .build();
-        button.active = enabled;
-        return button;
+        cards.clear();
+        for (int slotIndex = 0; slotIndex < data.slots().size(); slotIndex++) {
+            cards.add(new BoonCard(data, slotIndex,
+                    menuLeft + CARD_ROW_LEFT + slotIndex * CARD_SLOT_SPACING, menuTop + CARD_Y));
+        }
     }
 
     @Override
@@ -89,56 +81,84 @@ public class AltarScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+        drawCandleFlames(guiGraphics);
         int hoveredIndex = -1;
-        for (int slotIndex = 0; slotIndex < data.slots().size(); slotIndex++) {
-            if (isMouseOverCard(mouseX, mouseY, cardX(slotIndex), menuTop + CARD_Y)) {
-                hoveredIndex = slotIndex;
+        for (int cardIndex = 0; cardIndex < cards.size(); cardIndex++) {
+            if (cards.get(cardIndex).isHovered(mouseX, mouseY)) {
+                hoveredIndex = cardIndex;
             } else {
-                drawCard(guiGraphics, slotIndex, false);
+                cards.get(cardIndex).render(guiGraphics, font, mouseX, mouseY, false);
             }
         }
         if (hoveredIndex >= 0) {
-            drawCard(guiGraphics, hoveredIndex, true);
-            guiGraphics.renderComponentTooltip(font, tooltipLines(data.slots().get(hoveredIndex)), mouseX, mouseY);
+            BoonCard hoveredCard = cards.get(hoveredIndex);
+            hoveredCard.render(guiGraphics, font, mouseX, mouseY, true);
+            guiGraphics.renderComponentTooltip(font, hoveredCard.tooltipLines(), mouseX, mouseY);
         }
     }
 
-    private int cardX(int slotIndex) {
-        return menuLeft + CARD_ROW_LEFT + slotIndex * CARD_SLOT_SPACING;
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            for (BoonCard card : cards) {
+                if (card.isHovered(mouseX, mouseY) && card.mouseClicked(mouseX, mouseY)) {
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private void drawCard(GuiGraphics guiGraphics, int slotIndex, boolean hovered) {
-        int tier = data.slots().get(slotIndex).tier();
-        if (tier < 1 || tier > 4) {
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            boolean handled = false;
+            for (BoonCard card : cards) {
+                handled |= card.mouseReleased(mouseX, mouseY);
+            }
+            if (handled) {
+                return true;
+            }
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    private void drawCandleFlames(GuiGraphics guiGraphics) {
+        if (!data.candlesLit()) {
             return;
         }
-        int cardX = cardX(slotIndex);
-        int cardY = menuTop + CARD_Y;
-        guiGraphics.pose().pushPose();
-        if (hovered) {
-            float centerX = cardX + CARD_WIDTH / 2.0F;
-            float centerY = cardY + CARD_HEIGHT / 2.0F;
-            guiGraphics.pose().translate(centerX, centerY, 0);
-            guiGraphics.pose().scale(HOVERED_CARD_SCALE, HOVERED_CARD_SCALE, 1.0F);
-            guiGraphics.pose().translate(-centerX, -centerY, 0);
-        }
-        guiGraphics.setColor(0.0F, 0.0F, 0.0F, CARD_SHADOW_ALPHA);
-        guiGraphics.blit(COMPONENTS, cardX + CARD_SHADOW_OFFSET, cardY + CARD_SHADOW_OFFSET,
-                CARD_U_BY_TIER[tier - 1], CARD_V, CARD_WIDTH, CARD_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
-        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-        guiGraphics.blit(COMPONENTS, cardX, cardY, CARD_U_BY_TIER[tier - 1], CARD_V,
-                CARD_WIDTH, CARD_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
-        guiGraphics.pose().popPose();
+        long animationTick = Util.getMillis() / FLAME_FRAME_TIME_MS;
+        drawBigFlame(guiGraphics, LEFT_BIG_CANDLE_X, animationTick, LEFT_BIG_CANDLE_FRAME_OFFSET);
+        drawBigFlame(guiGraphics, RIGHT_BIG_CANDLE_X, animationTick, RIGHT_BIG_CANDLE_FRAME_OFFSET);
+        drawSmallFlame(guiGraphics, LEFT_SMALL_CANDLE_X, animationTick, LEFT_SMALL_CANDLE_FRAME_OFFSET);
+        drawSmallFlame(guiGraphics, RIGHT_SMALL_CANDLE_X, animationTick, RIGHT_SMALL_CANDLE_FRAME_OFFSET);
     }
 
-    private static boolean isMouseOverCard(int mouseX, int mouseY, int cardX, int cardY) {
-        return mouseX >= cardX && mouseX < cardX + CARD_WIDTH && mouseY >= cardY && mouseY < cardY + CARD_HEIGHT;
+    private void drawBigFlame(GuiGraphics guiGraphics, int menuX, long animationTick, int candleSeed) {
+        int frame = randomizedFrame(animationTick, candleSeed, BIG_FLAME_FRAME_COUNT);
+        guiGraphics.blit(COMPONENTS, menuLeft + menuX, menuTop + BIG_CANDLE_Y,
+                frame * (BIG_FLAME_WIDTH + 1), BIG_FLAME_ROW_V,
+                BIG_FLAME_WIDTH, BIG_FLAME_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
     }
 
-    private static List<Component> tooltipLines(AltarScreenPayload.SlotDisplay slot) {
-        List<Component> lines = new ArrayList<>();
-        lines.add(slot.title());
-        lines.addAll(slot.lines());
-        return lines;
+    private void drawSmallFlame(GuiGraphics guiGraphics, int menuX, long animationTick, int candleSeed) {
+        int frame = randomizedFrame(animationTick, candleSeed, SMALL_FLAME_FRAME_COUNT);
+        guiGraphics.blit(COMPONENTS, menuLeft + menuX, menuTop + SMALL_CANDLE_Y,
+                frame * (SMALL_FLAME_WIDTH + 1), SMALL_FLAME_ROW_V,
+                SMALL_FLAME_WIDTH, SMALL_FLAME_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+    }
+
+    private static int randomizedFrame(long animationTick, int candleSeed, int frameCount) {
+        int frame = scrambledFrame(animationTick, candleSeed, frameCount);
+        int previousFrame = scrambledFrame(animationTick - 1, candleSeed, frameCount);
+        return frame == previousFrame ? (frame + 1) % frameCount : frame;
+    }
+
+    private static int scrambledFrame(long animationTick, int candleSeed, int frameCount) {
+        long mixed = animationTick * 6364136223846793005L + candleSeed * 1442695040888963407L;
+        mixed ^= mixed >>> 33;
+        mixed *= 0xFF51AFD7ED558CCDL;
+        mixed ^= mixed >>> 33;
+        return (int) Math.floorMod(mixed, frameCount);
     }
 }

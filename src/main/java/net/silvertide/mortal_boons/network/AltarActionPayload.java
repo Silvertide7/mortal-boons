@@ -7,13 +7,14 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.silvertide.mortal_boons.MortalBoons;
 
-public record AltarActionPayload(BlockPos altarPos, Action action) implements CustomPacketPayload {
+public record AltarActionPayload(BlockPos altarPos, Action action, int slotIndex) implements CustomPacketPayload {
     public static final Type<AltarActionPayload> TYPE = new Type<>(MortalBoons.id("altar_action"));
 
     public enum Action {
         ROLL,
         REFORGE,
-        REROLL
+        REROLL,
+        FORSAKE
     }
 
     private static final StreamCodec<ByteBuf, Action> ACTION_STREAM_CODEC =
@@ -22,6 +23,7 @@ public record AltarActionPayload(BlockPos altarPos, Action action) implements Cu
     public static final StreamCodec<ByteBuf, AltarActionPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, AltarActionPayload::altarPos,
             ACTION_STREAM_CODEC, AltarActionPayload::action,
+            ByteBufCodecs.VAR_INT, AltarActionPayload::slotIndex,
             AltarActionPayload::new);
 
     @Override

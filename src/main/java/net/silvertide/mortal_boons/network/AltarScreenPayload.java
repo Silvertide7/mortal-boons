@@ -17,6 +17,7 @@ import net.silvertide.mortal_boons.boon.BoonManager;
 import net.silvertide.mortal_boons.boon.HeldBoon;
 import net.silvertide.mortal_boons.block.BoonAltarBlock;
 import net.silvertide.mortal_boons.boon.Tier;
+import net.silvertide.mortal_boons.config.BoonConfig;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 import net.silvertide.mortal_boons.roll.RollManager;
 
@@ -24,9 +25,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean beaconBelow, BlockPos altarPos,
+public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean beaconBelow,
+                                 AllowedActions allowedActions, BlockPos altarPos,
                                  List<SlotDisplay> slots) implements CustomPacketPayload {
     public static final Type<AltarScreenPayload> TYPE = new Type<>(MortalBoons.id("altar_screen"));
+
+    public record AllowedActions(boolean reroll, boolean reforge, boolean forsake) {
+        public static final StreamCodec<RegistryFriendlyByteBuf, AllowedActions> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.BOOL, AllowedActions::reroll,
+                ByteBufCodecs.BOOL, AllowedActions::reforge,
+                ByteBufCodecs.BOOL, AllowedActions::forsake,
+                AllowedActions::new);
+    }
 
     public record SlotDisplay(Component title, List<Component> lines, int tier) {
         public static final StreamCodec<RegistryFriendlyByteBuf, SlotDisplay> STREAM_CODEC = StreamCodec.composite(
@@ -40,6 +50,7 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
             ByteBufCodecs.VAR_INT, AltarScreenPayload::altarPower,
             ByteBufCodecs.BOOL, AltarScreenPayload::candlesLit,
             ByteBufCodecs.BOOL, AltarScreenPayload::beaconBelow,
+            AllowedActions.STREAM_CODEC, AltarScreenPayload::allowedActions,
             BlockPos.STREAM_CODEC, AltarScreenPayload::altarPos,
             SlotDisplay.STREAM_CODEC.apply(ByteBufCodecs.list()), AltarScreenPayload::slots,
             AltarScreenPayload::new);
@@ -53,6 +64,8 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
         boolean candlesLit = BoonAltarBlock.hasCandleRing(player.serverLevel(), altarPos);
         boolean beaconBelow = BoonAltarBlock.hasBeaconBelow(player.serverLevel(), altarPos);
         int altarPower = BoonAltarBlock.altarPowerAt(player.serverLevel(), altarPos);
+        AllowedActions allowedActions = new AllowedActions(BoonConfig.ALLOW_REROLL.get(),
+                BoonConfig.ALLOW_REFORGE.get(), BoonConfig.ALLOW_FORSAKE.get());
         List<HeldBoon> heldBoons = player.getData(BoonAttachments.BOON_DATA).getHeldBoons();
         List<SlotDisplay> slots = new ArrayList<>(RollManager.MAX_BOONS);
         for (int slotIndex = 0; slotIndex < RollManager.MAX_BOONS; slotIndex++) {
@@ -64,7 +77,7 @@ public record AltarScreenPayload(int altarPower, boolean candlesLit, boolean bea
                 slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of(), 0));
             }
         }
-        return new AltarScreenPayload(altarPower, candlesLit, beaconBelow, altarPos, slots);
+        return new AltarScreenPayload(altarPower, candlesLit, beaconBelow, allowedActions, altarPos, slots);
     }
 
     private static SlotDisplay heldSlot(HeldBoon held) {
