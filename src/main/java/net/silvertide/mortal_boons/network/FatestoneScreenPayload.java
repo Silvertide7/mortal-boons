@@ -1,6 +1,8 @@
 package net.silvertide.mortal_boons.network;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.locale.Language;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -40,13 +42,14 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
     }
 
     public record SlotDisplay(Component title, List<Component> lines, int tier, Optional<ResourceLocation> icon,
-                              Component name) {
+                              Component name, List<Component> effects) {
         public static final StreamCodec<RegistryFriendlyByteBuf, SlotDisplay> STREAM_CODEC = StreamCodec.composite(
                 ComponentSerialization.TRUSTED_STREAM_CODEC, SlotDisplay::title,
                 ComponentSerialization.TRUSTED_STREAM_CODEC.apply(ByteBufCodecs.list()), SlotDisplay::lines,
                 ByteBufCodecs.VAR_INT, SlotDisplay::tier,
                 ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs::optional), SlotDisplay::icon,
                 ComponentSerialization.TRUSTED_STREAM_CODEC, SlotDisplay::name,
+                ComponentSerialization.TRUSTED_STREAM_CODEC.apply(ByteBufCodecs.list()), SlotDisplay::effects,
                 SlotDisplay::new);
     }
 
@@ -77,10 +80,10 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
                 slots.add(heldSlot(heldBoons.get(slotIndex)));
             } else if (slotIndex < power) {
                 slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.empty"), List.of(), 0,
-                        Optional.empty(), Component.empty()));
+                        Optional.empty(), Component.empty(), List.of()));
             } else {
                 slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of(), 0,
-                        Optional.empty(), Component.empty()));
+                        Optional.empty(), Component.empty(), List.of()));
             }
         }
         return new FatestoneScreenPayload(power, candlesLit, beaconBelow, allowedActions, pos, slots);
@@ -91,7 +94,7 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
         Tier tier = Tier.fromLevel(held.tier());
         if (boonLookup.isEmpty()) {
             Component rawId = Component.literal(held.boonId().toString());
-            return new SlotDisplay(rawId, List.of(), held.tier(), Optional.empty(), rawId);
+            return new SlotDisplay(rawId, List.of(), held.tier(), Optional.empty(), rawId, List.of());
         }
         Boon boon = boonLookup.get();
         Component title = Component.empty()
@@ -101,10 +104,35 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
                 .append(")")
                 .withStyle(tier.color());
         List<Component> lines = new ArrayList<>();
-        boon.attributeGrants(held.tier()).forEach(grant -> lines.add(describeAttribute(grant)));
-        boon.abilityGrants().forEach(spec -> lines.add(Component.translatable("mortal_boons.screen.ability_grant",
-                spec.abilityId().toString(), spec.abilityLevel().resolve(held.tier()))));
-        return new SlotDisplay(title, lines, held.tier(), boon.iconTexture(held.tier()), boon.displayName());
+        List<Component> effects = new ArrayList<>();
+        boon.attributeGrants(held.tier()).forEach(grant -> {
+            Component described = describeAttribute(grant);
+            lines.add(described);
+            effects.add(described);
+        });
+        boon.abilityGrants().forEach(spec -> {
+            Component abilityName = abilityName(spec.abilityId());
+            effects.add(abilityName);
+            lines.add(Component.translatable("mortal_boons.screen.ability_grant",
+                    abilityName, spec.abilityLevel().resolve(held.tier())));
+            String descriptionKey = abilityNameKey(spec.abilityId()) + ".description";
+            if (Language.getInstance().has(descriptionKey)) {
+                lines.add(Component.translatable(descriptionKey).withStyle(ChatFormatting.GRAY));
+            }
+        });
+        return new SlotDisplay(title, lines, held.tier(), boon.iconTexture(held.tier()), boon.displayName(),
+                effects);
+    }
+
+    private static Component abilityName(ResourceLocation abilityId) {
+        String nameKey = abilityNameKey(abilityId);
+        return Language.getInstance().has(nameKey)
+                ? Component.translatable(nameKey)
+                : Component.literal(abilityId.toString());
+    }
+
+    private static String abilityNameKey(ResourceLocation abilityId) {
+        return "ability." + abilityId.getNamespace() + "." + abilityId.getPath().replace('/', '.');
     }
 
     private static Component describeAttribute(AttributeGrant grant) {

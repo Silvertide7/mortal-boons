@@ -32,11 +32,12 @@ public class BoonCard {
     private static final int ICON_FRAME_TOP = 5;
     private static final int ICON_SIZE = 16;
     private static final int ICON_INSET = (ICON_FRAME_SIZE - ICON_SIZE) / 2;
-    private static final int NAME_TOP = ICON_FRAME_TOP + ICON_FRAME_SIZE + 1;
+    private static final int NAME_TOP = ICON_FRAME_TOP + ICON_FRAME_SIZE + 2;
     private static final float NAME_SCALE = 0.5F;
-    private static final int NAME_COLOR = 0xEED3AB;
+    private static final int NAME_COLOR = 0x343129;
+    private static final int EFFECTS_GAP = 2;
     private static final float HOVERED_SCALE = 1.05F;
-    private static final float SHADOW_ALPHA = 0.15F;
+    private static final float SHADOW_ALPHA = 0.05F;
     private static final int SHADOW_OFFSET = 2;
 
     private final FatestoneScreenPayload.SlotDisplay slot;
@@ -151,14 +152,20 @@ public class BoonCard {
     private void renderName(GuiGraphics guiGraphics, Font font) {
         String upperCaseName = slot.name().getString().toUpperCase(Locale.ROOT);
         int wrapWidth = (int) (CONTENT_WIDTH / NAME_SCALE);
-        List<FormattedCharSequence> nameLines = font.split(Component.literal(upperCaseName), wrapWidth);
+        List<FormattedCharSequence> textLines = new ArrayList<>(
+                font.split(Component.literal(upperCaseName), wrapWidth));
+        int nameLineCount = textLines.size();
+        for (Component effect : slot.effects()) {
+            textLines.addAll(font.split(effect, wrapWidth));
+        }
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(x + WIDTH / 2.0F, y + NAME_TOP, 0);
         guiGraphics.pose().scale(NAME_SCALE, NAME_SCALE, 1.0F);
-        for (int lineIndex = 0; lineIndex < nameLines.size(); lineIndex++) {
-            FormattedCharSequence line = nameLines.get(lineIndex);
-            guiGraphics.drawString(font, line, -font.width(line) / 2, lineIndex * font.lineHeight,
-                    NAME_COLOR, false);
+        int effectGapFontUnits = (int) (EFFECTS_GAP / NAME_SCALE);
+        for (int lineIndex = 0; lineIndex < textLines.size(); lineIndex++) {
+            FormattedCharSequence line = textLines.get(lineIndex);
+            int lineY = lineIndex * font.lineHeight + (lineIndex >= nameLineCount ? effectGapFontUnits : 0);
+            guiGraphics.drawString(font, line, -font.width(line) / 2, lineY, NAME_COLOR, false);
         }
         guiGraphics.pose().popPose();
     }
