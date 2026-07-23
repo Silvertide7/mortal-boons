@@ -2,9 +2,12 @@ package net.silvertide.mortal_boons.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -16,7 +19,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.silvertide.mortal_boons.menu.FatestoneMenu;
 import net.silvertide.mortal_boons.network.FatestoneScreenPayload;
 import org.jetbrains.annotations.Nullable;
 
@@ -63,7 +66,12 @@ public class FatestoneBlock extends Block {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.PASS;
         }
-        PacketDistributor.sendToPlayer(serverPlayer, FatestoneScreenPayload.snapshot(serverPlayer, pos));
+        FatestoneScreenPayload snapshot = FatestoneScreenPayload.snapshot(serverPlayer, pos, 0);
+        serverPlayer.openMenu(new SimpleMenuProvider(
+                        (containerId, playerInventory, menuPlayer) -> new FatestoneMenu(containerId, playerInventory,
+                                snapshot, ContainerLevelAccess.create(level, pos)),
+                        Component.translatable("mortal_boons.screen.title")),
+                buf -> FatestoneScreenPayload.STREAM_CODEC.encode(buf, snapshot));
         return InteractionResult.CONSUME;
     }
 

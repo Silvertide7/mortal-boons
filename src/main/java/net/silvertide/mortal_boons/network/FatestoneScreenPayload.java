@@ -6,6 +6,7 @@ import net.minecraft.locale.Language;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -18,10 +19,13 @@ import net.silvertide.mortal_boons.block.FatestoneBlock;
 import net.silvertide.mortal_boons.boon.AttributeGrant;
 import net.silvertide.mortal_boons.boon.Boon;
 import net.silvertide.mortal_boons.boon.BoonManager;
+import net.silvertide.mortal_boons.boon.BoonTypeManager;
 import net.silvertide.mortal_boons.boon.HeldBoon;
+import net.silvertide.mortal_boons.boon.OfferingManager;
 import net.silvertide.mortal_boons.boon.Tier;
 import net.silvertide.mortal_boons.config.BoonConfig;
 import net.silvertide.mortal_boons.data.BoonAttachments;
+import net.silvertide.mortal_boons.data.BoonData;
 import net.silvertide.mortal_boons.roll.RollManager;
 
 import java.util.ArrayList;
@@ -29,8 +33,9 @@ import java.util.List;
 import java.util.Optional;
 
 public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beaconBelow,
-                                     AllowedActions allowedActions, BlockPos pos,
-                                     List<SlotDisplay> slots) implements CustomPacketPayload {
+                                     AllowedActions allowedActions, int temptFateXpCost,
+                                     boolean offeringsEnabled, boolean offeringRequired, int revision,
+                                     BlockPos pos, List<SlotDisplay> slots) implements CustomPacketPayload {
     public static final Type<FatestoneScreenPayload> TYPE = new Type<>(MortalBoons.id("fatestone_screen"));
 
     public record AllowedActions(boolean reroll, boolean reforge, boolean forsake) {
@@ -42,51 +47,92 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
     }
 
     public record SlotDisplay(Component title, List<Component> lines, int tier, Optional<ResourceLocation> icon,
-                              Component name, List<Component> effects) {
-        public static final StreamCodec<RegistryFriendlyByteBuf, SlotDisplay> STREAM_CODEC = StreamCodec.composite(
-                ComponentSerialization.TRUSTED_STREAM_CODEC, SlotDisplay::title,
-                ComponentSerialization.TRUSTED_STREAM_CODEC.apply(ByteBufCodecs.list()), SlotDisplay::lines,
-                ByteBufCodecs.VAR_INT, SlotDisplay::tier,
-                ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs::optional), SlotDisplay::icon,
-                ComponentSerialization.TRUSTED_STREAM_CODEC, SlotDisplay::name,
-                ComponentSerialization.TRUSTED_STREAM_CODEC.apply(ByteBufCodecs.list()), SlotDisplay::effects,
-                SlotDisplay::new);
+                              Component name, Component types, List<Component> effects) {
+        private static final StreamCodec<RegistryFriendlyByteBuf, List<Component>> COMPONENT_LIST_STREAM_CODEC =
+                ComponentSerialization.TRUSTED_STREAM_CODEC.apply(ByteBufCodecs.list());
+        private static final StreamCodec<io.netty.buffer.ByteBuf, Optional<ResourceLocation>> ICON_STREAM_CODEC =
+                ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs::optional);
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, SlotDisplay> STREAM_CODEC = StreamCodec.of(
+                (buf, slot) -> {
+                    ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, slot.title());
+                    COMPONENT_LIST_STREAM_CODEC.encode(buf, slot.lines());
+                    ByteBufCodecs.VAR_INT.encode(buf, slot.tier());
+                    ICON_STREAM_CODEC.encode(buf, slot.icon());
+                    ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, slot.name());
+                    ComponentSerialization.TRUSTED_STREAM_CODEC.encode(buf, slot.types());
+                    COMPONENT_LIST_STREAM_CODEC.encode(buf, slot.effects());
+                },
+                buf -> new SlotDisplay(
+                        ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf),
+                        COMPONENT_LIST_STREAM_CODEC.decode(buf),
+                        ByteBufCodecs.VAR_INT.decode(buf),
+                        ICON_STREAM_CODEC.decode(buf),
+                        ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf),
+                        ComponentSerialization.TRUSTED_STREAM_CODEC.decode(buf),
+                        COMPONENT_LIST_STREAM_CODEC.decode(buf)));
     }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, FatestoneScreenPayload> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, FatestoneScreenPayload::power,
-            ByteBufCodecs.BOOL, FatestoneScreenPayload::candlesLit,
-            ByteBufCodecs.BOOL, FatestoneScreenPayload::beaconBelow,
-            AllowedActions.STREAM_CODEC, FatestoneScreenPayload::allowedActions,
-            BlockPos.STREAM_CODEC, FatestoneScreenPayload::pos,
-            SlotDisplay.STREAM_CODEC.apply(ByteBufCodecs.list()), FatestoneScreenPayload::slots,
-            FatestoneScreenPayload::new);
+    private static final StreamCodec<RegistryFriendlyByteBuf, List<SlotDisplay>> SLOTS_STREAM_CODEC =
+            SlotDisplay.STREAM_CODEC.apply(ByteBufCodecs.list());
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, FatestoneScreenPayload> STREAM_CODEC = StreamCodec.of(
+            (buf, payload) -> {
+                ByteBufCodecs.VAR_INT.encode(buf, payload.power());
+                ByteBufCodecs.BOOL.encode(buf, payload.candlesLit());
+                ByteBufCodecs.BOOL.encode(buf, payload.beaconBelow());
+                AllowedActions.STREAM_CODEC.encode(buf, payload.allowedActions());
+                ByteBufCodecs.VAR_INT.encode(buf, payload.temptFateXpCost());
+                ByteBufCodecs.BOOL.encode(buf, payload.offeringsEnabled());
+                ByteBufCodecs.BOOL.encode(buf, payload.offeringRequired());
+                ByteBufCodecs.VAR_INT.encode(buf, payload.revision());
+                BlockPos.STREAM_CODEC.encode(buf, payload.pos());
+                SLOTS_STREAM_CODEC.encode(buf, payload.slots());
+            },
+            buf -> new FatestoneScreenPayload(
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf),
+                    AllowedActions.STREAM_CODEC.decode(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    BlockPos.STREAM_CODEC.decode(buf),
+                    SLOTS_STREAM_CODEC.decode(buf)));
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
     }
 
-    public static FatestoneScreenPayload snapshot(ServerPlayer player, BlockPos pos) {
+    public static FatestoneScreenPayload snapshot(ServerPlayer player, BlockPos pos, int revision) {
         boolean candlesLit = FatestoneBlock.hasCandleRing(player.serverLevel(), pos);
         boolean beaconBelow = FatestoneBlock.hasBeaconBelow(player.serverLevel(), pos);
         int power = FatestoneBlock.powerAt(player.serverLevel(), pos);
-        AllowedActions allowedActions = new AllowedActions(BoonConfig.ALLOW_REROLL.get(),
-                BoonConfig.ALLOW_REFORGE.get(), BoonConfig.ALLOW_FORSAKE.get());
-        List<HeldBoon> heldBoons = player.getData(BoonAttachments.BOON_DATA).getHeldBoons();
+        BoonData boonData = player.getData(BoonAttachments.BOON_DATA);
+        int temptFateXpCost = RollManager.xpLevelCost(boonData.getLifetimeRollCount());
+        List<HeldBoon> heldBoons = boonData.getHeldBoons();
+        AllowedActions allowedActions = new AllowedActions(
+                BoonConfig.ALLOW_REROLL.get() && power >= BoonConfig.REROLL_REQUIRED_POWER.get()
+                        && heldBoons.size() >= BoonConfig.REROLL_REQUIRED_BOONS.get(),
+                BoonConfig.ALLOW_REFORGE.get() && power >= BoonConfig.REFORGE_REQUIRED_POWER.get()
+                        && heldBoons.size() >= BoonConfig.REFORGE_REQUIRED_BOONS.get(),
+                BoonConfig.ALLOW_FORSAKE.get());
         List<SlotDisplay> slots = new ArrayList<>(RollManager.MAX_BOONS);
         for (int slotIndex = 0; slotIndex < RollManager.MAX_BOONS; slotIndex++) {
             if (slotIndex < heldBoons.size()) {
                 slots.add(heldSlot(heldBoons.get(slotIndex)));
             } else if (slotIndex < power) {
                 slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.empty"), List.of(), 0,
-                        Optional.empty(), Component.empty(), List.of()));
+                        Optional.empty(), Component.empty(), Component.empty(), List.of()));
             } else {
                 slots.add(new SlotDisplay(Component.translatable("mortal_boons.screen.locked"), List.of(), 0,
-                        Optional.empty(), Component.empty(), List.of()));
+                        Optional.empty(), Component.empty(), Component.empty(), List.of()));
             }
         }
-        return new FatestoneScreenPayload(power, candlesLit, beaconBelow, allowedActions, pos, slots);
+        return new FatestoneScreenPayload(power, candlesLit, beaconBelow, allowedActions, temptFateXpCost,
+                OfferingManager.offeringsEnabled(), OfferingManager.offeringRequired(), revision, pos, slots);
     }
 
     private static SlotDisplay heldSlot(HeldBoon held) {
@@ -94,7 +140,8 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
         Tier tier = Tier.fromLevel(held.tier());
         if (boonLookup.isEmpty()) {
             Component rawId = Component.literal(held.boonId().toString());
-            return new SlotDisplay(rawId, List.of(), held.tier(), Optional.empty(), rawId, List.of());
+            return new SlotDisplay(rawId, List.of(), held.tier(), Optional.empty(), rawId, Component.empty(),
+                    List.of());
         }
         Boon boon = boonLookup.get();
         Component title = Component.empty()
@@ -120,8 +167,24 @@ public record FatestoneScreenPayload(int power, boolean candlesLit, boolean beac
                 lines.add(Component.translatable(descriptionKey).withStyle(ChatFormatting.GRAY));
             }
         });
+        boon.types().forEach(type -> BoonTypeManager.description(type).ifPresent(description ->
+                lines.add(Component.literal(description).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))));
         return new SlotDisplay(title, lines, held.tier(), boon.iconTexture(held.tier()), boon.displayName(),
-                effects);
+                composeTypes(boon.types()), effects);
+    }
+
+    private static Component composeTypes(List<ResourceLocation> types) {
+        if (types.isEmpty()) {
+            return Component.empty();
+        }
+        MutableComponent typesLine = Component.empty();
+        for (int typeIndex = 0; typeIndex < types.size(); typeIndex++) {
+            if (typeIndex > 0) {
+                typesLine.append(", ");
+            }
+            typesLine.append(BoonTypeManager.displayName(types.get(typeIndex)));
+        }
+        return typesLine;
     }
 
     private static Component abilityName(ResourceLocation abilityId) {

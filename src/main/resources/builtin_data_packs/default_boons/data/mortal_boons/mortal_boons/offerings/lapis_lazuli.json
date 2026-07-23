@@ -1,0 +1,4 @@
+{
+  "item": { "item": "minecraft:lapis_lazuli" },
+  "type_weight_multiplier": { "mortal_boons:combat": 100.0 }
+}

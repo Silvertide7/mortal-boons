@@ -14,6 +14,7 @@ import net.silvertide.mortal_boons.boon.BoonEffects;
 import net.silvertide.mortal_boons.boon.BoonManager;
 import net.silvertide.mortal_boons.boon.HeldBoon;
 import net.silvertide.mortal_boons.boon.Tier;
+import net.silvertide.mortal_boons.compat.player_abilities.PlayerAbilitiesIntegration;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 import net.silvertide.mortal_boons.data.BoonData;
 import net.silvertide.mortal_boons.roll.RollManager;
@@ -77,6 +78,7 @@ public final class BoonCommands {
         }
         int clearedCount = player.getData(BoonAttachments.BOON_DATA).getHeldBoons().size();
         BoonEffects.removeAllHeld(player);
+        PlayerAbilitiesIntegration.revokeAllGrants(player);
         player.setData(BoonAttachments.BOON_DATA, new BoonData());
         player.setData(BoonAttachments.ROLL_COOLDOWN_END_GAME_TIME, 0L);
         source.sendSuccess(() -> Component.translatable("mortal_boons.clear.success", clearedCount), false);

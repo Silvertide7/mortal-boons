@@ -7,23 +7,33 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
 import net.silvertide.mortal_boons.boon.Boon;
 import net.silvertide.mortal_boons.boon.BoonEffects;
 import net.silvertide.mortal_boons.boon.BoonManager;
 import net.silvertide.mortal_boons.boon.HeldBoon;
+import net.silvertide.mortal_boons.boon.Offering;
+import net.silvertide.mortal_boons.boon.OfferingManager;
 import net.silvertide.mortal_boons.boon.Tier;
 import net.silvertide.mortal_boons.compat.player_abilities.PlayerAbilitiesIntegration;
 import net.silvertide.mortal_boons.config.BoonConfig;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 import net.silvertide.mortal_boons.data.BoonData;
+import net.silvertide.mortal_boons.menu.FatestoneMenu;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public final class RollManager {
     public static final int MAX_BOONS = 3;
     private static final int TICKS_PER_SECOND = 20;
+    private static final int TIER_COUNT = 4;
 
     private RollManager() {
     }
@@ -44,14 +54,27 @@ public final class RollManager {
         if (rejectIfOnCooldown(player, gameTime) || rejectIfCannotAfford(player, cost)) {
             return false;
         }
-        Optional<Boon> rolledBoon = pickWeightedExcludingHeld(player.getRandom(), boonData);
-        if (rolledBoon.isEmpty()) {
+        ItemStack offeringStack = ItemStack.EMPTY;
+        Offering offering = null;
+        if (OfferingManager.offeringsEnabled() && player.containerMenu instanceof FatestoneMenu fatestoneMenu) {
+            offeringStack = fatestoneMenu.getOfferingItem();
+            offering = OfferingManager.matching(offeringStack).orElse(null);
+            if (offering == null && !player.isCreative() && OfferingManager.offeringRequired()) {
+                player.displayClientMessage(Component.translatable("mortal_boons.roll.requires_offering"), false);
+                return false;
+            }
+        }
+        Map<Integer, List<Boon>> candidatesByTier = candidatesByTier(boonData);
+        int tier = rollTier(player.getRandom(), candidatesByTier, offering);
+        if (tier < 0) {
             player.displayClientMessage(Component.translatable("mortal_boons.roll.none_available"), false);
             return false;
         }
-        Boon boon = rolledBoon.get();
-        int tier = rollTier(player.getRandom(), boon);
+        Boon boon = pickBoon(player.getRandom(), candidatesByTier.get(tier), tier, offering);
         chargeXpAndStartCooldown(player, gameTime, cost);
+        if (offering != null && !player.isCreative()) {
+            offeringStack.shrink(1);
+        }
         boonData.addBoon(new HeldBoon(boon.id(), tier));
         boonData.incrementLifetimeRollCount();
         BoonEffects.apply(player, boon, tier);
@@ -69,6 +92,11 @@ public final class RollManager {
         BoonData boonData = player.getData(BoonAttachments.BOON_DATA);
         long gameTime = player.level().getGameTime();
         List<HeldBoon> heldBoons = boonData.getHeldBoons();
+        if (heldBoons.size() < BoonConfig.REFORGE_REQUIRED_BOONS.get()) {
+            player.displayClientMessage(Component.translatable("mortal_boons.reforge.requires_boons",
+                    BoonConfig.REFORGE_REQUIRED_BOONS.get()), false);
+            return false;
+        }
         if (slotIndex < 0 || slotIndex >= heldBoons.size()) {
             rejectInvalidSlot(player);
             return false;
@@ -84,7 +112,7 @@ public final class RollManager {
             return false;
         }
         Boon boon = boonLookup.get();
-        int newTier = rollTier(player.getRandom(), boon);
+        int newTier = reforgeTier(player.getRandom(), boon);
         chargeXpAndStartCooldown(player, gameTime, cost);
         boonData.replaceBoonAt(slotIndex, new HeldBoon(boon.id(), newTier));
         BoonEffects.apply(player, boon, newTier);
@@ -102,8 +130,9 @@ public final class RollManager {
         BoonData boonData = player.getData(BoonAttachments.BOON_DATA);
         long gameTime = player.level().getGameTime();
         List<HeldBoon> heldBoons = boonData.getHeldBoons();
-        if (BoonConfig.REROLL_REQUIRES_FULL_SLOTS.get() && heldBoons.size() < MAX_BOONS) {
-            player.displayClientMessage(Component.translatable("mortal_boons.reroll.requires_full", MAX_BOONS), false);
+        if (heldBoons.size() < BoonConfig.REROLL_REQUIRED_BOONS.get()) {
+            player.displayClientMessage(Component.translatable("mortal_boons.reroll.requires_boons",
+                    BoonConfig.REROLL_REQUIRED_BOONS.get()), false);
             return false;
         }
         if (slotIndex < 0 || slotIndex >= heldBoons.size()) {
@@ -114,8 +143,9 @@ public final class RollManager {
         if (rejectIfOnCooldown(player, gameTime) || rejectIfCannotAfford(player, cost)) {
             return false;
         }
-        Optional<Boon> replacementBoon = pickWeightedExcludingHeld(player.getRandom(), boonData);
-        if (replacementBoon.isEmpty()) {
+        Map<Integer, List<Boon>> candidatesByTier = candidatesByTier(boonData);
+        int newTier = rollTier(player.getRandom(), candidatesByTier, null);
+        if (newTier < 0) {
             player.displayClientMessage(Component.translatable("mortal_boons.roll.none_available"), false);
             return false;
         }
@@ -123,8 +153,7 @@ public final class RollManager {
         Component removedName = BoonManager.get(removed.boonId())
                 .map(Boon::displayName)
                 .orElse(Component.literal(removed.boonId().toString()));
-        Boon newBoon = replacementBoon.get();
-        int newTier = rollTier(player.getRandom(), newBoon);
+        Boon newBoon = pickBoon(player.getRandom(), candidatesByTier.get(newTier), newTier, null);
         chargeXpAndStartCooldown(player, gameTime, cost);
         BoonManager.get(removed.boonId()).ifPresent(oldBoon ->
                 BoonEffects.remove(player, oldBoon, removed.tier()));
@@ -146,6 +175,13 @@ public final class RollManager {
         if (slotIndex < 0 || slotIndex >= heldBoons.size()) {
             rejectInvalidSlot(player);
             return false;
+        }
+        int cost = BoonConfig.FORSAKE_XP_LEVEL_COST.get();
+        if (rejectIfCannotAfford(player, cost)) {
+            return false;
+        }
+        if (!player.isCreative()) {
+            player.giveExperienceLevels(-cost);
         }
         HeldBoon removed = heldBoons.get(slotIndex);
         Component removedName = BoonManager.get(removed.boonId())
@@ -199,30 +235,131 @@ public final class RollManager {
         if (!player.isCreative()) {
             player.giveExperienceLevels(-cost);
         }
-        player.setData(BoonAttachments.ROLL_COOLDOWN_END_GAME_TIME, gameTime + BoonConfig.ROLL_COOLDOWN_TICKS.get());
+        player.setData(BoonAttachments.ROLL_COOLDOWN_END_GAME_TIME,
+                gameTime + (long) BoonConfig.ROLL_COOLDOWN_SECONDS.get() * TICKS_PER_SECOND);
     }
 
-    private static Optional<Boon> pickWeightedExcludingHeld(RandomSource random, BoonData boonData) {
-        List<Boon> candidates = BoonManager.all().stream()
-                .filter(boon -> !boonData.holds(boon.id()))
-                .filter(boon -> boon.weight() > 0)
-                .filter(boon -> !boon.requiresPlayerAbilities() || PlayerAbilitiesIntegration.isLoaded())
-                .toList();
-        int totalWeight = candidates.stream().mapToInt(Boon::weight).sum();
-        if (totalWeight <= 0) {
-            return Optional.empty();
-        }
-        int pick = random.nextInt(totalWeight);
-        for (Boon candidate : candidates) {
-            pick -= candidate.weight();
-            if (pick < 0) {
-                return Optional.of(candidate);
+    private static Map<Integer, List<Boon>> candidatesByTier(BoonData boonData) {
+        Map<Integer, List<Boon>> candidatesByTier = new HashMap<>();
+        for (Boon boon : BoonManager.all()) {
+            if (boonData.holds(boon.id())
+                    || (boon.requiresPlayerAbilities() && !PlayerAbilitiesIntegration.isLoaded())) {
+                continue;
+            }
+            for (int tier = boon.minTier(); tier <= boon.maxTier(); tier++) {
+                if (boon.weight(tier) > 0) {
+                    candidatesByTier.computeIfAbsent(tier, key -> new ArrayList<>()).add(boon);
+                }
             }
         }
-        return Optional.empty();
+        return candidatesByTier;
     }
 
-    private static int rollTier(RandomSource random, Boon boon) {
-        return boon.minTier() + random.nextInt(boon.maxTier() - boon.minTier() + 1);
+    private static int rollTier(RandomSource random, Map<Integer, List<Boon>> candidatesByTier,
+                                @Nullable Offering offering) {
+        int tier = rollTierWithModifiers(random, candidatesByTier, offering);
+        return tier < 0 && offering != null ? rollTierWithModifiers(random, candidatesByTier, null) : tier;
+    }
+
+    private static int rollTierWithModifiers(RandomSource random, Map<Integer, List<Boon>> candidatesByTier,
+                                             @Nullable Offering offering) {
+        List<? extends Integer> configuredWeights = BoonConfig.TIER_WEIGHTS.get();
+        double[] weights = new double[TIER_COUNT];
+        double totalWeight = 0;
+        for (int tier = 1; tier <= TIER_COUNT; tier++) {
+            double weight = candidatesByTier.containsKey(tier) ? baseTierWeight(configuredWeights, tier) : 0;
+            if (offering != null) {
+                weight *= offering.tierMultiplier(tier);
+                if (offering.minTier().isPresent() && tier < offering.minTier().get()) {
+                    weight = 0;
+                }
+            }
+            weights[tier - 1] = weight;
+            totalWeight += weight;
+        }
+        if (totalWeight <= 0) {
+            return -1;
+        }
+        double pick = random.nextDouble() * totalWeight;
+        for (int tier = 1; tier <= TIER_COUNT; tier++) {
+            pick -= weights[tier - 1];
+            if (pick < 0) {
+                return tier;
+            }
+        }
+        for (int tier = TIER_COUNT; tier >= 1; tier--) {
+            if (weights[tier - 1] > 0) {
+                return tier;
+            }
+        }
+        return -1;
+    }
+
+    private static double baseTierWeight(List<? extends Integer> configuredWeights, int tier) {
+        return tier - 1 < configuredWeights.size() ? Math.max(0, configuredWeights.get(tier - 1)) : 1;
+    }
+
+    private static Boon pickBoon(RandomSource random, List<Boon> pool, int tier, @Nullable Offering offering) {
+        Boon picked = pickBoonWeighted(random, pool, tier, offering);
+        return picked != null ? picked : pickBoonWeighted(random, pool, tier, null);
+    }
+
+    @Nullable
+    private static Boon pickBoonWeighted(RandomSource random, List<Boon> pool, int tier,
+                                         @Nullable Offering offering) {
+        double[] weights = new double[pool.size()];
+        double totalWeight = 0;
+        for (int poolIndex = 0; poolIndex < pool.size(); poolIndex++) {
+            Boon boon = pool.get(poolIndex);
+            double weight = boon.weight(tier);
+            if (offering != null) {
+                for (ResourceLocation type : boon.types()) {
+                    weight *= Math.max(0, offering.typeWeightMultiplier().getOrDefault(type, 1.0));
+                }
+            }
+            weights[poolIndex] = weight;
+            totalWeight += weight;
+        }
+        if (totalWeight <= 0) {
+            return null;
+        }
+        double pick = random.nextDouble() * totalWeight;
+        for (int poolIndex = 0; poolIndex < pool.size(); poolIndex++) {
+            pick -= weights[poolIndex];
+            if (pick < 0) {
+                return pool.get(poolIndex);
+            }
+        }
+        return pool.getLast();
+    }
+
+    private static int reforgeTier(RandomSource random, Boon boon) {
+        List<Integer> availableTiers = new ArrayList<>();
+        for (int tier = boon.minTier(); tier <= boon.maxTier(); tier++) {
+            if (boon.weight(tier) > 0) {
+                availableTiers.add(tier);
+            }
+        }
+        if (availableTiers.isEmpty()) {
+            return boon.minTier();
+        }
+        List<? extends Integer> configuredWeights = BoonConfig.TIER_WEIGHTS.get();
+        double[] weights = new double[availableTiers.size()];
+        double totalWeight = 0;
+        for (int tierIndex = 0; tierIndex < availableTiers.size(); tierIndex++) {
+            weights[tierIndex] = baseTierWeight(configuredWeights, availableTiers.get(tierIndex));
+            totalWeight += weights[tierIndex];
+        }
+        if (totalWeight <= 0) {
+            return availableTiers.get(random.nextInt(availableTiers.size()));
+        }
+        double pick = random.nextDouble() * totalWeight;
+        for (int tierIndex = 0; tierIndex < availableTiers.size(); tierIndex++) {
+            pick -= weights[tierIndex];
+            if (pick < 0) {
+                return availableTiers.get(tierIndex);
+            }
+        }
+        return availableTiers.getLast();
     }
 }

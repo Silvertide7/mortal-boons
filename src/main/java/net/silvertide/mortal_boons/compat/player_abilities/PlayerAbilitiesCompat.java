@@ -8,12 +8,14 @@ import net.silvertide.player_abilities.api.Ability;
 import net.silvertide.player_abilities.api.AbilityAPI;
 import net.silvertide.player_abilities.api.AbilityRegistry;
 
-import java.util.Map;
-
 final class PlayerAbilitiesCompat {
-    private static final ResourceLocation GRANT_SOURCE = MortalBoons.id("boons");
+    private static final String GRANT_SOURCE_PATH_PREFIX = "boons/";
 
     private PlayerAbilitiesCompat() {
+    }
+
+    private static ResourceLocation grantSource(Boon boon) {
+        return MortalBoons.id(GRANT_SOURCE_PATH_PREFIX + boon.id().getNamespace() + "/" + boon.id().getPath());
     }
 
     static void applyBoon(ServerPlayer player, Boon boon, int tier) {
@@ -23,7 +25,7 @@ final class PlayerAbilitiesCompat {
                 MortalBoons.LOGGER.warn("Boon {} grants unknown ability {}", boon.id(), spec.abilityId());
                 return;
             }
-            AbilityAPI.grant(player, GRANT_SOURCE, ability, spec.abilityLevel().resolve(tier));
+            AbilityAPI.grant(player, grantSource(boon), ability, spec.abilityLevel().resolve(tier));
         });
     }
 
@@ -31,14 +33,17 @@ final class PlayerAbilitiesCompat {
         boon.abilityGrants().forEach(spec -> {
             Ability ability = AbilityRegistry.ABILITIES.get(spec.abilityId());
             if (ability != null) {
-                AbilityAPI.revoke(player, GRANT_SOURCE, ability);
+                AbilityAPI.revoke(player, grantSource(boon), ability);
             }
         });
     }
 
     static void revokeAllGrants(ServerPlayer player) {
-        Map<Ability, Integer> grantedByUs = AbilityAPI.getGrantsBySource(player)
-                .getOrDefault(GRANT_SOURCE, Map.of());
-        grantedByUs.keySet().forEach(ability -> AbilityAPI.revoke(player, GRANT_SOURCE, ability));
+        AbilityAPI.getGrantsBySource(player).forEach((source, grants) -> {
+            if (source.getNamespace().equals(MortalBoons.MODID)
+                    && source.getPath().startsWith(GRANT_SOURCE_PATH_PREFIX)) {
+                grants.keySet().forEach(ability -> AbilityAPI.revoke(player, source, ability));
+            }
+        });
     }
 }

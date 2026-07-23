@@ -14,8 +14,9 @@ powerful but mortal — **die and you lose all of them**.
 - **Fatestone**: a single block whose `POWER` (1–3) comes from its surroundings: +1 for lit
   candles on its back and both sides (front stays open; the block has `FACING`), +1 for a
   beacon block directly beneath. No ordering — each condition independently adds one. Power
-  gates progression: 1 rolls boons (slot cap 1), 2 unlocks reforge (tier reroll, cap 2), 3
-  unlocks reroll (replace a boon, cap 3, requires full slots by default) and emits light.
+  gates progression: slot cap = power; reroll and reforge unlock at configurable power
+  levels (defaults: reroll 2, reforge 3) and configurable held-boon counts (default: 3 held
+  for both). Power 3 emits light.
   Power is a blockstate updated via `neighborChanged` (all checked positions are adjacent),
   with one model/texture per power level. Weakening a Fatestone never removes held boons.
 - **Abilities**: boons can grant active/passive/triggered abilities from the sibling

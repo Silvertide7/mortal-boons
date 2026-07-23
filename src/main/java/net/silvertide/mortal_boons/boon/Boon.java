@@ -12,9 +12,15 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import java.util.List;
 import java.util.Optional;
 
-public record Boon(ResourceLocation id, int weight, int minTier, int maxTier,
+public record Boon(ResourceLocation id, LeveledValue<Integer> weight, int minTier, int maxTier,
                    List<TierScaledAttribute> tierScaledAttributes, List<AbilityGrantSpec> abilityGrants,
-                   Optional<LeveledValue<ResourceLocation>> icon) {
+                   Optional<LeveledValue<ResourceLocation>> icon, List<ResourceLocation> types) {
+
+    private static final LeveledValue<Integer> DEFAULT_WEIGHT = new LeveledValue<>(List.of(10));
+
+    public int weight(int tier) {
+        return weight.resolve(tier);
+    }
 
     public record TierScaledAttribute(Holder<Attribute> attribute, LeveledValue<Double> amount,
                                       AttributeModifier.Operation operation) {
@@ -38,23 +44,25 @@ public record Boon(ResourceLocation id, int weight, int minTier, int maxTier,
         ).apply(instance, AbilityGrantSpec::new));
     }
 
-    public record Definition(int weight, int minTier, int maxTier,
+    public record Definition(LeveledValue<Integer> weight, int minTier, int maxTier,
                              List<TierScaledAttribute> tierScaledAttributes,
                              List<AbilityGrantSpec> abilityGrants,
-                             Optional<LeveledValue<ResourceLocation>> icon) {
+                             Optional<LeveledValue<ResourceLocation>> icon,
+                             List<ResourceLocation> types) {
         public static final Codec<Definition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("weight", 10).forGetter(Definition::weight),
+                LeveledValue.codec(Codec.INT).optionalFieldOf("weight", DEFAULT_WEIGHT).forGetter(Definition::weight),
                 Codec.intRange(1, 4).optionalFieldOf("min_tier", 1).forGetter(Definition::minTier),
                 Codec.intRange(1, 4).optionalFieldOf("max_tier", 4).forGetter(Definition::maxTier),
                 TierScaledAttribute.CODEC.listOf().optionalFieldOf("attribute_grants", List.of())
                         .forGetter(Definition::tierScaledAttributes),
                 AbilityGrantSpec.CODEC.listOf().optionalFieldOf("ability_grants", List.of())
                         .forGetter(Definition::abilityGrants),
-                LeveledValue.codec(ResourceLocation.CODEC).optionalFieldOf("icon").forGetter(Definition::icon)
+                LeveledValue.codec(ResourceLocation.CODEC).optionalFieldOf("icon").forGetter(Definition::icon),
+                ResourceLocation.CODEC.listOf().optionalFieldOf("types", List.of()).forGetter(Definition::types)
         ).apply(instance, Definition::new));
 
         public Boon toBoon(ResourceLocation id) {
-            return new Boon(id, weight, minTier, maxTier, tierScaledAttributes, abilityGrants, icon);
+            return new Boon(id, weight, minTier, maxTier, tierScaledAttributes, abilityGrants, icon, types);
         }
     }
 

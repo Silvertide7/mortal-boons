@@ -18,5 +18,7 @@ public final class BoonNetworking {
                 ClientPayloadHandlers::handleFatestoneScreen);
         registrar.playToServer(FatestoneActionPayload.TYPE, FatestoneActionPayload.STREAM_CODEC,
                 ServerPayloadHandlers::handleFatestoneAction);
+        registrar.playToClient(SyncOfferingsPayload.TYPE, SyncOfferingsPayload.STREAM_CODEC,
+                ClientPayloadHandlers::handleSyncOfferings);
     }
 }

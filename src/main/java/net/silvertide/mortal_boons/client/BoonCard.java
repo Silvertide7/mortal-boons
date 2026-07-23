@@ -1,12 +1,17 @@
 package net.silvertide.mortal_boons.client;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.silvertide.mortal_boons.MortalBoons;
+import net.silvertide.mortal_boons.boon.OfferingManager;
+import net.silvertide.mortal_boons.config.BoonClientConfig;
+import net.silvertide.mortal_boons.menu.FatestoneMenu;
 import net.silvertide.mortal_boons.network.FatestoneActionPayload;
 import net.silvertide.mortal_boons.network.FatestoneScreenPayload;
 
@@ -26,6 +31,7 @@ public class BoonCard {
     private static final int CONTENT_WIDTH = 38;
     private static final int BUTTON_STACK_BOTTOM = 50;
     private static final int BUTTON_GAP = 1;
+    private static final int TEMPT_FATE_BUTTON_TOP = 30;
     private static final int ICON_FRAME_SIZE = 20;
     private static final int ICON_FRAME_ROW_V = 108;
     private static final int ICON_FRAME_STRIDE_U = ICON_FRAME_SIZE + 1;
@@ -35,10 +41,12 @@ public class BoonCard {
     private static final int NAME_TOP = ICON_FRAME_TOP + ICON_FRAME_SIZE + 2;
     private static final float NAME_SCALE = 0.5F;
     private static final int NAME_COLOR = 0x343129;
-    private static final int NETHERITE_NAME_COLOR = 0x97807A;
+    private static final int NETHERITE_NAME_COLOR = 0xBCB2AF;
     private static final int EFFECTS_GAP = 2;
     private static final int NAME_MAX_LINES = 2;
     private static final int EFFECTS_MAX_LINES = 3;
+    private static final float TYPES_SCALE = 0.375F;
+    private static final int TYPES_MAX_LINES = 1;
     private static final float HOVERED_SCALE = 1.05F;
     private static final float SHADOW_ALPHA = 0.05F;
     private static final int SHADOW_OFFSET = 2;
@@ -48,37 +56,61 @@ public class BoonCard {
     private final int y;
     private final List<CardButton> buttons = new ArrayList<>();
 
-    public BoonCard(FatestoneScreenPayload payload, int slotIndex, int x, int y, boolean temptFateSlot) {
+    public BoonCard(FatestoneScreenPayload payload, FatestoneMenu menu, int slotIndex, int x, int y,
+                    boolean temptFateSlot) {
         this.slot = payload.slots().get(slotIndex);
         this.x = x;
         this.y = y;
         if (hasCard()) {
-            List<FatestoneActionPayload.Action> actions = allowedActions(payload.allowedActions());
+            List<FatestoneActionPayload.Action> actions = allowedActions(payload);
             for (int actionIndex = 0; actionIndex < actions.size(); actionIndex++) {
                 FatestoneActionPayload.Action action = actions.get(actionIndex);
                 buttons.add(CardButton.action(buttonX(), buttonY(actionIndex, actions.size()), slot.tier(),
                         Component.translatable(labelKey(action)),
-                        () -> PacketDistributor.sendToServer(
-                                new FatestoneActionPayload(payload.pos(), action, slotIndex))));
+                        () -> PacketDistributor.sendToServer(new FatestoneActionPayload(
+                                payload.pos(), action, slotIndex, payload.revision()))));
             }
         } else if (temptFateSlot) {
             buttons.add(CardButton.temptFate(x + (WIDTH - CardButton.TEMPT_FATE_WIDTH) / 2,
-                    y + (HEIGHT - CardButton.TEMPT_FATE_HEIGHT) / 2,
+                    y + TEMPT_FATE_BUTTON_TOP,
                     Component.translatable(labelKey(FatestoneActionPayload.Action.TEMPT_FATE)),
                     () -> PacketDistributor.sendToServer(new FatestoneActionPayload(
-                            payload.pos(), FatestoneActionPayload.Action.TEMPT_FATE, slotIndex))));
+                            payload.pos(), FatestoneActionPayload.Action.TEMPT_FATE, slotIndex,
+                            payload.revision())),
+                    () -> canAffordTemptFate(payload.temptFateXpCost())
+                            && hasRequiredOffering(payload, menu),
+                    () -> canAffordTemptFate(payload.temptFateXpCost())
+                            ? Component.translatable("mortal_boons.roll.requires_offering")
+                            : Component.translatable("mortal_boons.roll.not_enough_xp",
+                            payload.temptFateXpCost())));
         }
     }
 
-    private static List<FatestoneActionPayload.Action> allowedActions(FatestoneScreenPayload.AllowedActions allowed) {
+    private static boolean canAffordTemptFate(int xpLevelCost) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player != null && (player.getAbilities().instabuild || player.experienceLevel >= xpLevelCost);
+    }
+
+    private static boolean hasRequiredOffering(FatestoneScreenPayload payload, FatestoneMenu menu) {
+        if (!payload.offeringRequired()) {
+            return true;
+        }
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player != null && player.getAbilities().instabuild) {
+            return true;
+        }
+        return OfferingManager.matches(menu.getOfferingItem());
+    }
+
+    private static List<FatestoneActionPayload.Action> allowedActions(FatestoneScreenPayload payload) {
         List<FatestoneActionPayload.Action> actions = new ArrayList<>();
-        if (allowed.reroll()) {
+        if (payload.allowedActions().reroll()) {
             actions.add(FatestoneActionPayload.Action.REROLL);
         }
-        if (allowed.reforge()) {
+        if (payload.allowedActions().reforge()) {
             actions.add(FatestoneActionPayload.Action.REFORGE);
         }
-        if (allowed.forsake()) {
+        if (payload.allowedActions().forsake()) {
             actions.add(FatestoneActionPayload.Action.FORSAKE);
         }
         return actions;
@@ -109,15 +141,22 @@ public class BoonCard {
         return handled;
     }
 
-    public boolean showsTooltip() {
-        return hasCard() || buttons.isEmpty();
-    }
-
-    public List<Component> tooltipLines() {
-        List<Component> lines = new ArrayList<>();
-        lines.add(slot.title());
-        lines.addAll(slot.lines());
-        return lines;
+    public List<Component> tooltipLinesAt(double mouseX, double mouseY) {
+        for (CardButton button : buttons) {
+            if (!button.isEnabled() && button.isMouseOver(mouseX, mouseY)) {
+                return List.of(button.disabledReason());
+            }
+        }
+        if (hasCard() || buttons.isEmpty()) {
+            List<Component> lines = new ArrayList<>();
+            lines.add(slot.title());
+            if (!slot.types().getString().isEmpty()) {
+                lines.add(slot.types());
+            }
+            lines.addAll(slot.lines());
+            return lines;
+        }
+        return List.of();
     }
 
     public void render(GuiGraphics guiGraphics, Font font, int mouseX, int mouseY, boolean hovered) {
@@ -153,27 +192,44 @@ public class BoonCard {
     }
 
     private void renderName(GuiGraphics guiGraphics, Font font) {
+        int textColor = slot.tier() == 4 ? NETHERITE_NAME_COLOR : NAME_COLOR;
         String upperCaseName = slot.name().getString().toUpperCase(Locale.ROOT);
-        int wrapWidth = (int) (CONTENT_WIDTH / NAME_SCALE);
-        List<FormattedCharSequence> textLines = new ArrayList<>(
-                limited(font.split(Component.literal(upperCaseName), wrapWidth), NAME_MAX_LINES));
-        int nameLineCount = textLines.size();
+        int textY = y + NAME_TOP;
+        textY += drawCenteredScaled(guiGraphics, font,
+                limited(font.split(Component.literal(upperCaseName), wrapWidth(NAME_SCALE)), NAME_MAX_LINES),
+                NAME_SCALE, textY, textColor);
+        if (showsTypes()) {
+            textY += drawCenteredScaled(guiGraphics, font,
+                    limited(font.split(slot.types(), wrapWidth(TYPES_SCALE)), TYPES_MAX_LINES),
+                    TYPES_SCALE, textY, textColor);
+        }
         List<FormattedCharSequence> effectLines = new ArrayList<>();
         for (Component effect : slot.effects()) {
-            effectLines.addAll(font.split(effect, wrapWidth));
+            effectLines.addAll(font.split(effect, wrapWidth(NAME_SCALE)));
         }
-        textLines.addAll(limited(effectLines, EFFECTS_MAX_LINES));
+        drawCenteredScaled(guiGraphics, font, limited(effectLines, EFFECTS_MAX_LINES),
+                NAME_SCALE, textY + EFFECTS_GAP, textColor);
+    }
+
+    private boolean showsTypes() {
+        return !slot.types().getString().isEmpty() && BoonClientConfig.SHOW_BOON_TYPES.get();
+    }
+
+    private static int wrapWidth(float scale) {
+        return (int) (CONTENT_WIDTH / scale);
+    }
+
+    private int drawCenteredScaled(GuiGraphics guiGraphics, Font font, List<FormattedCharSequence> lines,
+                                   float scale, int top, int color) {
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(x + WIDTH / 2.0F, y + NAME_TOP, 0);
-        guiGraphics.pose().scale(NAME_SCALE, NAME_SCALE, 1.0F);
-        int effectGapFontUnits = (int) (EFFECTS_GAP / NAME_SCALE);
-        int textColor = slot.tier() == 4 ? NETHERITE_NAME_COLOR : NAME_COLOR;
-        for (int lineIndex = 0; lineIndex < textLines.size(); lineIndex++) {
-            FormattedCharSequence line = textLines.get(lineIndex);
-            int lineY = lineIndex * font.lineHeight + (lineIndex >= nameLineCount ? effectGapFontUnits : 0);
-            guiGraphics.drawString(font, line, -font.width(line) / 2, lineY, textColor, false);
+        guiGraphics.pose().translate(x + WIDTH / 2.0F, top, 0);
+        guiGraphics.pose().scale(scale, scale, 1.0F);
+        for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
+            FormattedCharSequence line = lines.get(lineIndex);
+            guiGraphics.drawString(font, line, -font.width(line) / 2, lineIndex * font.lineHeight, color, false);
         }
         guiGraphics.pose().popPose();
+        return Math.round(lines.size() * font.lineHeight * scale);
     }
 
     private static List<FormattedCharSequence> limited(List<FormattedCharSequence> lines, int maxLines) {

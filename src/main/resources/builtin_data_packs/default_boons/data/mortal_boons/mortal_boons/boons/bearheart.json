@@ -2,11 +2,19 @@
   "weight": 10,
   "min_tier": 1,
   "max_tier": 4,
+  "types": [
+    "mortal_boons:vitality"
+  ],
   "icon": "minecraft:textures/item/golden_apple.png",
   "attribute_grants": [
     {
       "attribute": "minecraft:generic.max_health",
-      "amount": [2.0, 4.0, 6.0, 8.0],
+      "amount": [
+        2.0,
+        4.0,
+        6.0,
+        8.0
+      ],
       "operation": "add_value"
     }
   ]
