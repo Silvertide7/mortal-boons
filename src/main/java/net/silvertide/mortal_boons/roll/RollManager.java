@@ -72,7 +72,7 @@ public final class RollManager {
         }
         Boon boon = pickBoon(player.getRandom(), candidatesByTier.get(tier), tier, offering);
         chargeXpAndStartCooldown(player, gameTime, cost);
-        if (offering != null && !player.isCreative()) {
+        if (offering != null) {
             offeringStack.shrink(1);
         }
         boonData.addBoon(new HeldBoon(boon.id(), tier));
