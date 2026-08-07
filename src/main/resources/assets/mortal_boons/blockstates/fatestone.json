@@ -1,8 +1,16 @@
 {
   "variants": {
-    "facing=north": { "model": "mortal_boons:block/fatestone" },
-    "facing=east": { "model": "mortal_boons:block/fatestone", "y": 90 },
-    "facing=south": { "model": "mortal_boons:block/fatestone", "y": 180 },
-    "facing=west": { "model": "mortal_boons:block/fatestone", "y": 270 }
+    "facing=north,power=1": { "model": "mortal_boons:block/fatestone" },
+    "facing=east,power=1": { "model": "mortal_boons:block/fatestone", "y": 90 },
+    "facing=south,power=1": { "model": "mortal_boons:block/fatestone", "y": 180 },
+    "facing=west,power=1": { "model": "mortal_boons:block/fatestone", "y": 270 },
+    "facing=north,power=2": { "model": "mortal_boons:block/fatestone_waking" },
+    "facing=east,power=2": { "model": "mortal_boons:block/fatestone_waking", "y": 90 },
+    "facing=south,power=2": { "model": "mortal_boons:block/fatestone_waking", "y": 180 },
+    "facing=west,power=2": { "model": "mortal_boons:block/fatestone_waking", "y": 270 },
+    "facing=north,power=3": { "model": "mortal_boons:block/fatestone_awakened" },
+    "facing=east,power=3": { "model": "mortal_boons:block/fatestone_awakened", "y": 90 },
+    "facing=south,power=3": { "model": "mortal_boons:block/fatestone_awakened", "y": 180 },
+    "facing=west,power=3": { "model": "mortal_boons:block/fatestone_awakened", "y": 270 }
   }
 }

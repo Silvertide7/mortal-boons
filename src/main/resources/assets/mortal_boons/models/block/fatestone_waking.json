@@ -1,0 +1,7 @@
+{
+  "parent": "mortal_boons:block/fatestone",
+  "textures": {
+    "0": "mortal_boons:block/fatestone_waking",
+    "particle": "mortal_boons:block/fatestone_waking"
+  }
+}
