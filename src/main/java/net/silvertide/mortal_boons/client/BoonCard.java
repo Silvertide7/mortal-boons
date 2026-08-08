@@ -31,7 +31,7 @@ public class BoonCard {
     private static final int CONTENT_WIDTH = 38;
     private static final int BUTTON_STACK_BOTTOM = 50;
     private static final int BUTTON_GAP = 1;
-    private static final int TEMPT_FATE_BUTTON_TOP = 30;
+    private static final int TEMPT_FATE_BUTTON_TOP = 38;
     private static final int ICON_FRAME_SIZE = 20;
     private static final int ICON_FRAME_ROW_V = 108;
     private static final int ICON_FRAME_STRIDE_U = ICON_FRAME_SIZE + 1;
@@ -41,7 +41,6 @@ public class BoonCard {
     private static final int NAME_TOP = ICON_FRAME_TOP + ICON_FRAME_SIZE + 2;
     private static final float NAME_SCALE = 0.5F;
     private static final int NAME_COLOR = 0x343129;
-    private static final int NETHERITE_NAME_COLOR = 0xBCB2AF;
     private static final int EFFECTS_GAP = 2;
     private static final int NAME_MAX_LINES = 2;
     private static final int EFFECTS_MAX_LINES = 3;
@@ -192,23 +191,22 @@ public class BoonCard {
     }
 
     private void renderName(GuiGraphics guiGraphics, Font font) {
-        int textColor = slot.tier() == 4 ? NETHERITE_NAME_COLOR : NAME_COLOR;
         String upperCaseName = slot.name().getString().toUpperCase(Locale.ROOT);
         int textY = y + NAME_TOP;
         textY += drawCenteredScaled(guiGraphics, font,
                 limited(font.split(Component.literal(upperCaseName), wrapWidth(NAME_SCALE)), NAME_MAX_LINES),
-                NAME_SCALE, textY, textColor);
+                NAME_SCALE, textY, NAME_COLOR);
         if (showsTypes()) {
             textY += drawCenteredScaled(guiGraphics, font,
                     limited(font.split(slot.types(), wrapWidth(TYPES_SCALE)), TYPES_MAX_LINES),
-                    TYPES_SCALE, textY, textColor);
+                    TYPES_SCALE, textY, NAME_COLOR);
         }
         List<FormattedCharSequence> effectLines = new ArrayList<>();
         for (Component effect : slot.effects()) {
             effectLines.addAll(font.split(effect, wrapWidth(NAME_SCALE)));
         }
         drawCenteredScaled(guiGraphics, font, limited(effectLines, EFFECTS_MAX_LINES),
-                NAME_SCALE, textY + EFFECTS_GAP, textColor);
+                NAME_SCALE, textY + EFFECTS_GAP, NAME_COLOR);
     }
 
     private boolean showsTypes() {
