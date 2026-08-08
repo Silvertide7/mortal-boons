@@ -44,6 +44,13 @@ public class BoonManager extends SimpleJsonResourceReloadListener {
                                 id, definition.minTier(), definition.maxTier());
                         return;
                     }
+                    int weightEntries = definition.weight().perLevel().size();
+                    if (weightEntries > 1 && weightEntries < definition.maxTier()) {
+                        MortalBoons.LOGGER.warn(
+                                "Boon {} weight list has {} entries but max_tier is {}; per-tier lists always index"
+                                        + " from tier 1 — pad to max_tier entries", id, weightEntries,
+                                definition.maxTier());
+                    }
                     parsed.put(id, definition.toBoon(id));
                 }));
         boons = Collections.unmodifiableMap(parsed);

@@ -7,7 +7,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.silvertide.mortal_boons.MortalBoons;
 import net.silvertide.mortal_boons.menu.FatestoneMenus;
 
-@EventBusSubscriber(modid = MortalBoons.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = MortalBoons.MODID, value = Dist.CLIENT)
 public final class FatestoneScreens {
     private FatestoneScreens() {
     }

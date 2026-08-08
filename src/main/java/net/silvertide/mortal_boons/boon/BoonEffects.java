@@ -1,5 +1,6 @@
 package net.silvertide.mortal_boons.boon;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -51,7 +52,27 @@ public final class BoonEffects {
                 BoonManager.get(held.boonId()).ifPresent(boon -> remove(player, boon, held.tier())));
     }
 
+    public static void refreshAfterDatapackReload(ServerPlayer player) {
+        stripAllBoonModifiers(player);
+        PlayerAbilitiesIntegration.revokeAllGrants(player);
+        applyAllHeld(player);
+    }
+
+    private static void stripAllBoonModifiers(ServerPlayer player) {
+        BuiltInRegistries.ATTRIBUTE.holders().forEach(attributeHolder -> {
+            AttributeInstance attributeInstance = player.getAttribute(attributeHolder);
+            if (attributeInstance == null) {
+                return;
+            }
+            attributeInstance.getModifiers().stream()
+                    .map(AttributeModifier::id)
+                    .filter(modifierId -> modifierId.getNamespace().equals(MortalBoons.MODID))
+                    .toList()
+                    .forEach(attributeInstance::removeModifier);
+        });
+    }
+
     private static ResourceLocation modifierId(Boon boon, int grantIndex) {
-        return MortalBoons.id("boon/" + boon.id().getPath() + "/" + grantIndex);
+        return MortalBoons.id("boon/" + boon.id().getNamespace() + "/" + boon.id().getPath() + "/" + grantIndex);
     }
 }

@@ -1,0 +1,19 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_ender_eye": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          { "items": "minecraft:ender_eye" }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    ["has_ender_eye"]
+  ],
+  "rewards": {
+    "recipes": ["mortal_boons:fatestone"]
+  }
+}

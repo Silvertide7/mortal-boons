@@ -1,6 +1,7 @@
 package net.silvertide.mortal_boons.network;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -19,7 +20,12 @@ public record FatestoneActionPayload(BlockPos pos, Action action, int slotIndex,
     }
 
     private static final StreamCodec<ByteBuf, Action> ACTION_STREAM_CODEC =
-            ByteBufCodecs.VAR_INT.map(ordinal -> Action.values()[ordinal], Action::ordinal);
+            ByteBufCodecs.VAR_INT.map(ordinal -> {
+                if (ordinal < 0 || ordinal >= Action.values().length) {
+                    throw new DecoderException("Unknown Fatestone action " + ordinal);
+                }
+                return Action.values()[ordinal];
+            }, Action::ordinal);
 
     public static final StreamCodec<ByteBuf, FatestoneActionPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, FatestoneActionPayload::pos,

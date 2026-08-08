@@ -28,7 +28,7 @@ powerful but mortal — **die and you lose all of them**.
   cooldown. All configurable.
 - **Death**: wipes every held boon. This is the core mechanic — implemented by registering
   the player data attachment *without* `.copyOnDeath()`.
-- **Deferred (post-MVP)**: HUD/screens, datapack boon definitions, tooltip polish.
+- **Deferred (post-MVP)**: HUD widget, JEI/tooltip polish, advancements.
 
 Key design docs in `claude_reference/`:
 - `implementation_plan.md` — the phased build plan. Follow it; update it when the design changes.

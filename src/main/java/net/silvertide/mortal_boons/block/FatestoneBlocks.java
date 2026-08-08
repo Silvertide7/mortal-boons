@@ -14,7 +14,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.silvertide.mortal_boons.MortalBoons;
 
-@EventBusSubscriber(modid = MortalBoons.MODID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = MortalBoons.MODID)
 public final class FatestoneBlocks {
     private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MortalBoons.MODID);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MortalBoons.MODID);

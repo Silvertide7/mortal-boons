@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.silvertide.mortal_boons.MortalBoons;
 import net.silvertide.mortal_boons.boon.BoonEffects;
@@ -27,6 +28,11 @@ public final class BoonLifecycleHandler {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             BoonEffects.applyAllHeld(serverPlayer);
         }
+    }
+
+    @SubscribeEvent
+    public static void onDatapackSync(OnDatapackSyncEvent event) {
+        event.getRelevantPlayers().forEach(BoonEffects::refreshAfterDatapackReload);
     }
 
     @SubscribeEvent

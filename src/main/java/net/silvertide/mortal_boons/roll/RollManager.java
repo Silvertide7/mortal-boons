@@ -296,7 +296,7 @@ public final class RollManager {
     }
 
     private static double baseTierWeight(List<? extends Integer> configuredWeights, int tier) {
-        return tier - 1 < configuredWeights.size() ? Math.max(0, configuredWeights.get(tier - 1)) : 1;
+        return tier - 1 < configuredWeights.size() ? Math.max(0, configuredWeights.get(tier - 1)) : 0;
     }
 
     private static Boon pickBoon(RandomSource random, List<Boon> pool, int tier, @Nullable Offering offering) {
@@ -330,7 +330,12 @@ public final class RollManager {
                 return pool.get(poolIndex);
             }
         }
-        return pool.getLast();
+        for (int poolIndex = pool.size() - 1; poolIndex >= 0; poolIndex--) {
+            if (weights[poolIndex] > 0) {
+                return pool.get(poolIndex);
+            }
+        }
+        return null;
     }
 
     private static int reforgeTier(RandomSource random, Boon boon) {
@@ -357,6 +362,11 @@ public final class RollManager {
         for (int tierIndex = 0; tierIndex < availableTiers.size(); tierIndex++) {
             pick -= weights[tierIndex];
             if (pick < 0) {
+                return availableTiers.get(tierIndex);
+            }
+        }
+        for (int tierIndex = availableTiers.size() - 1; tierIndex >= 0; tierIndex--) {
+            if (weights[tierIndex] > 0) {
                 return availableTiers.get(tierIndex);
             }
         }

@@ -9,9 +9,19 @@ import net.silvertide.mortal_boons.menu.FatestoneMenu;
 import net.silvertide.mortal_boons.roll.RollManager;
 
 public final class ServerPayloadHandlers {
-    private static final double FATESTONE_INTERACTION_PADDING = 2.0;
+    private static final double FATESTONE_INTERACTION_PADDING = 4.0;
 
     private ServerPayloadHandlers() {
+    }
+
+    public static void refreshOpenFatestoneMenu(ServerPlayer serverPlayer) {
+        if (serverPlayer.containerMenu instanceof FatestoneMenu fatestoneMenu) {
+            FatestoneScreenPayload refreshed = FatestoneScreenPayload.snapshot(serverPlayer,
+                    fatestoneMenu.getSnapshot().pos(), fatestoneMenu.bumpRevision());
+            fatestoneMenu.updateFromSnapshot(refreshed);
+            fatestoneMenu.returnInaccessibleOffering(serverPlayer);
+            PacketDistributor.sendToPlayer(serverPlayer, refreshed);
+        }
     }
 
     public static void handleFatestoneAction(FatestoneActionPayload payload, IPayloadContext context) {
@@ -46,10 +56,7 @@ public final class ServerPayloadHandlers {
                     case FORSAKE -> RollManager.forsake(serverPlayer, payload.slotIndex());
                 }
             }
-            FatestoneScreenPayload refreshed = FatestoneScreenPayload.snapshot(serverPlayer, payload.pos(),
-                    fatestoneMenu.bumpRevision());
-            fatestoneMenu.updateFromSnapshot(refreshed);
-            PacketDistributor.sendToPlayer(serverPlayer, refreshed);
+            refreshOpenFatestoneMenu(serverPlayer);
         });
     }
 }

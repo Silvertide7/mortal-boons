@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SGS",
+    "GEG",
+    "SSS"
+  ],
+  "key": {
+    "S": { "item": "minecraft:deepslate_bricks" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "E": { "item": "minecraft:ender_eye" }
+  },
+  "result": {
+    "id": "mortal_boons:fatestone",
+    "count": 1
+  }
+}

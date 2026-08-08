@@ -51,6 +51,15 @@ public class FatestoneBlock extends Block {
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
                                    BlockPos neighborPos, boolean movedByPiston) {
+        refreshPower(state, level, pos);
+    }
+
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        refreshPower(state, level, pos);
+    }
+
+    private void refreshPower(BlockState state, Level level, BlockPos pos) {
         int power = computePower(level, pos, state.getValue(FACING));
         if (power != state.getValue(POWER)) {
             level.setBlock(pos, state.setValue(POWER, power), Block.UPDATE_ALL);

@@ -17,6 +17,7 @@ import net.silvertide.mortal_boons.boon.Tier;
 import net.silvertide.mortal_boons.compat.player_abilities.PlayerAbilitiesIntegration;
 import net.silvertide.mortal_boons.data.BoonAttachments;
 import net.silvertide.mortal_boons.data.BoonData;
+import net.silvertide.mortal_boons.network.ServerPayloadHandlers;
 import net.silvertide.mortal_boons.roll.RollManager;
 
 import java.util.List;
@@ -48,7 +49,9 @@ public final class BoonCommands {
         if (player == null) {
             return 0;
         }
-        return RollManager.roll(player, RollManager.MAX_BOONS) ? Command.SINGLE_SUCCESS : 0;
+        boolean rolled = RollManager.roll(player, RollManager.MAX_BOONS);
+        ServerPayloadHandlers.refreshOpenFatestoneMenu(player);
+        return rolled ? Command.SINGLE_SUCCESS : 0;
     }
 
     private static int list(CommandSourceStack source) {
@@ -81,6 +84,7 @@ public final class BoonCommands {
         PlayerAbilitiesIntegration.revokeAllGrants(player);
         player.setData(BoonAttachments.BOON_DATA, new BoonData());
         player.setData(BoonAttachments.ROLL_COOLDOWN_END_GAME_TIME, 0L);
+        ServerPayloadHandlers.refreshOpenFatestoneMenu(player);
         source.sendSuccess(() -> Component.translatable("mortal_boons.clear.success", clearedCount), false);
         return Command.SINGLE_SUCCESS;
     }

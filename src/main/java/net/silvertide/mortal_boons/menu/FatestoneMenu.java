@@ -87,6 +87,12 @@ public class FatestoneMenu extends AbstractContainerMenu {
         return offeringSlotVisible ? activeOfferingColumn : -1;
     }
 
+    public void returnInaccessibleOffering(Player player) {
+        if (getActiveOfferingColumn() < 0 && !offeringContainer.isEmpty()) {
+            clearContainer(player, offeringContainer);
+        }
+    }
+
     public void updateFromSnapshot(FatestoneScreenPayload payload) {
         offeringSlotVisible = payload.offeringsEnabled();
         activeOfferingColumn = -1;
